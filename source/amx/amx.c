@@ -331,7 +331,7 @@ typedef enum {
     unsigned char *s = (unsigned char *)v;
     unsigned char t;
 
-    assert(sizeof(*v)==2);
+    assert_static(sizeof(*v)==2);
     /* swap two bytes */
     t=s[0];
     s[0]=s[1];
@@ -363,7 +363,7 @@ typedef enum {
     unsigned char *s = (unsigned char *)v;
     unsigned char t;
 
-    assert(sizeof(*v)==8);
+    assert_static(sizeof(*v)==8);
 
     t=s[0];
     s[0]=s[7];
@@ -407,7 +407,7 @@ uint32_t * AMXAPI amx_Align32(uint32_t *v)
 #if defined _I64_MAX || defined HAVE_I64
 uint64_t * AMXAPI amx_Align64(uint64_t *v)
 {
-  assert(sizeof(*v)==8);
+  assert_static(sizeof(*v)==8);
   assert(check_endian());
   #if BYTE_ORDER==BIG_ENDIAN
     swap64(v);
@@ -1912,7 +1912,7 @@ static const void * const amx_opcodelist[] = {
    */
   assert(amx!=NULL);
   if ((amx->flags & AMX_FLAG_BROWSE)==AMX_FLAG_BROWSE) {
-    assert(sizeof(cell)==sizeof(void *));
+    assert_static(sizeof(cell)==sizeof(void *));
     assert(retval!=NULL);
     *retval=(cell)amx_opcodelist;
     return 0;
@@ -1970,20 +1970,20 @@ static const void * const amx_opcodelist[] = {
   assert(check_endian());
 
   /* sanity checks */
-  assert(OP_PUSH_PRI==36);
-  assert(OP_PROC==46);
-  assert(OP_SHL==65);
-  assert(OP_SMUL==72);
-  assert(OP_EQ==95);
-  assert(OP_INC_PRI==107);
-  assert(OP_MOVS==117);
-  assert(OP_SYMBOL==126);
+  assert_static(OP_PUSH_PRI==36);
+  assert_static(OP_PROC==46);
+  assert_static(OP_SHL==65);
+  assert_static(OP_SMUL==72);
+  assert_static(OP_EQ==95);
+  assert_static(OP_INC_PRI==107);
+  assert_static(OP_MOVS==117);
+  assert_static(OP_SYMBOL==126);
   #if PAWN_CELL_SIZE==16
-    assert(sizeof(cell)==2);
+    assert_static(sizeof(cell)==2);
   #elif PAWN_CELL_SIZE==32
-    assert(sizeof(cell)==4);
+    assert_static(sizeof(cell)==4);
   #elif PAWN_CELL_SIZE==64
-    assert(sizeof(cell)==8);
+    assert_static(sizeof(cell)==8);
   #else
     #error Unsupported cell size
   #endif
@@ -3059,7 +3059,7 @@ int AMXAPI amx_Exec(AMX *amx, cell *retval, int index)
      * is not passed.
      */
     if ((amx->flags & AMX_FLAG_BROWSE)==AMX_FLAG_BROWSE) {
-      assert(sizeof(cell)==sizeof(void *));
+      assert_static(sizeof(cell)==sizeof(void *));
       assert(retval!=NULL);
       #if defined ASM32 && defined JIT
         if ((amx->flags & AMX_FLAG_JITC)!=0)
