@@ -1,6 +1,6 @@
 /*  Pawn Abstract Machine (for the Pawn language)
  *
- *  Copyright (c) ITB CompuPhase, 1997-2006
+ *  Copyright (c) ITB CompuPhase, 1997-2008
  *
  *  This software is provided "as-is", without any express or implied warranty.
  *  In no event will the authors be held liable for any damages arising from
@@ -94,10 +94,11 @@
 #if !defined assert_static
   /* see "Compile-Time Assertions" by Ralf Holly,
    * C/C++ Users Journal, November 2004
+   * with modification from Sшren Hannibal
    */
   #define assert_static(e) \
     do { \
-      enum { assert_static__ = 1/(e) }; \
+      enum { assert_static__ = 1/((e)?1:0) }; \
     } while (0)
 #endif
 
@@ -111,6 +112,9 @@ extern  "C" {
   #endif
   #if !defined AMXAPI
     #define AMXAPI          __stdcall
+  #endif
+  #if !defined AMXEXPORT
+    #define AMXEXPORT       __declspec(dllexport)
   #endif
 #endif
 
@@ -299,9 +303,9 @@ typedef struct tagAMX_HEADER {
   int32_t publics       PACKED; /* offset to the "public functions" table */
   int32_t natives       PACKED; /* offset to the "native functions" table */
   int32_t libraries     PACKED; /* offset to the table of libraries */
-  int32_t pubvars       PACKED; /* the "public variables" table */
-  int32_t tags          PACKED; /* the "public tagnames" table */
-  int32_t nametable     PACKED; /* name table */
+  int32_t pubvars       PACKED; /* offset to the "public variables" table */
+  int32_t tags          PACKED; /* offset to the "public tagnames" table */
+  int32_t nametable     PACKED; /* offset to the name table */
 } AMX_HEADER;
 
 #if PAWN_CELL_SIZE==16

@@ -1,6 +1,6 @@
 /*  String functions for the Pawn Abstract Machine
  *
- *  Copyright (c) ITB CompuPhase, 2005-2006
+ *  Copyright (c) ITB CompuPhase, 2005-2008
  *
  *  This software is provided "as-is", without any express or implied warranty.
  *  In no event will the authors be held liable for any damages arising from
@@ -18,7 +18,7 @@
  *      misrepresented as being the original software.
  *  3.  This notice may not be removed or altered from any source distribution.
  *
- *  Version: $Id: amxstring.c 3656 2006-10-24 07:20:26Z thiadmer $
+ *  Version: $Id: amxstring.c 3827 2007-10-16 14:53:31Z thiadmer $
  */
 
 #include <limits.h>
@@ -51,6 +51,9 @@
 
 #if !defined isdigit
 # define isdigit(c)     ((unsigned)((c)-'0')<10u)
+#endif
+#if !defined sizearray
+# define sizearray(a)   (sizeof(a) / sizeof((a)[0]))
 #endif
 
 
@@ -294,6 +297,45 @@ static cell AMX_NATIVE_CALL n_strcat(AMX *amx,const cell *params)
     assert((ucell)*cdest<=UNPACKEDMAX || len2==0);
     err=amx_StrUnpack(cdest+len2,csrc,len);
   } /* if */
+  if (err!=AMX_ERR_NONE)
+    return amx_RaiseError(amx,err);
+
+  return len;
+}
+
+/* strcopy(dest[], const source[], maxlength=sizeof dest)
+ * packed/unpacked attribute from source[]
+ */
+static cell AMX_NATIVE_CALL n_strcopy(AMX *amx,const cell *params)
+{
+  cell *cdest,*csrc;
+  int len,needed;
+  int packed,err;
+  size_t lastaddr;
+
+  /* calculate number of cells needed for (packed) destination */
+  amx_GetAddr(amx,params[2],&csrc);
+  amx_GetAddr(amx,params[1],&cdest);
+  amx_StrLen(csrc,&len);
+  packed=(ucell)*csrc>UNPACKEDMAX;
+  if (packed) {
+    if ((unsigned)len>params[3]*sizeof(cell)-1)
+      len=params[3]*sizeof(cell)-1;
+    needed=(len+sizeof(cell))/sizeof(cell); /* # of cells needed */
+    assert(needed>0);
+    lastaddr=(size_t)(params[1]+sizeof(cell)*needed-1);
+  } else {
+    if (len>params[3]-1)
+      len=params[3]-1;
+    lastaddr=(size_t)(params[1]+sizeof(cell)*(len+1)-1);
+  } /* if */
+  if (verify_addr(amx,(cell)lastaddr)!=AMX_ERR_NONE)
+    return amx_RaiseError(amx,AMX_ERR_NATIVE);
+
+  if (packed)
+    err=amx_StrPack(cdest,csrc,len,0);
+  else
+    err=amx_StrUnpack(cdest,csrc,len);
   if (err!=AMX_ERR_NONE)
     return amx_RaiseError(amx,err);
 
@@ -613,12 +655,11 @@ static cell AMX_NATIVE_CALL n_strval(AMX *amx,const cell *params)
 static cell AMX_NATIVE_CALL n_valstr(AMX *amx,const cell *params)
 {
   TCHAR str[50];
-  cell value,mult;
+  cell value,temp;
   cell *cstr;
   int len,result,negate=0;
 
   /* find out how many digits are needed */
-  mult=10;
   len=1;
   value=params[2];
   if (value<0) {
@@ -626,10 +667,9 @@ static cell AMX_NATIVE_CALL n_valstr(AMX *amx,const cell *params)
     len++;
     value=-value;
   } /* if */
-  while (value>=mult) {
+  for (temp=value; temp>=10; temp/=10)
     len++;
-    mult*=10;
-  } /* while */
+  assert(len<=sizearray(str));
 
   /* put in the string */
   result=len;
@@ -857,6 +897,7 @@ const AMX_NATIVE_INFO string_Natives[] = {
   { "memcpy",    n_memcpy },
   { "strcat",    n_strcat },
   { "strcmp",    n_strcmp },
+  { "strcopy",   n_strcopy },
   { "strdel",    n_strdel },
   { "strfind",   n_strfind },
   { "strformat", n_strformat },
@@ -872,12 +913,12 @@ const AMX_NATIVE_INFO string_Natives[] = {
   { NULL, NULL }        /* terminator */
 };
 
-int AMXEXPORT amx_StringInit(AMX *amx)
+int AMXEXPORT AMXAPI amx_StringInit(AMX *amx)
 {
   return amx_Register(amx, string_Natives, -1);
 }
 
-int AMXEXPORT amx_StringCleanup(AMX *amx)
+int AMXEXPORT AMXAPI amx_StringCleanup(AMX *amx)
 {
   (void)amx;
   return AMX_ERR_NONE;

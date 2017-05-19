@@ -1,6 +1,6 @@
 /*  Pawn Abstract Machine (for the Pawn language)
  *
- *  Copyright (c) ITB CompuPhase, 1997-2006
+ *  Copyright (c) ITB CompuPhase, 1997-2009
  *
  *  This software is provided "as-is", without any express or implied warranty.
  *  In no event will the authors be held liable for any damages arising from
@@ -924,7 +924,7 @@ static void expand(unsigned char *code, long codesize, long memsize)
 int AMXAPI amx_Init(AMX *amx,void *program)
 {
   AMX_HEADER *hdr;
-  int err;
+  int err,i;
   unsigned char *data;
   #if (defined _Windows || defined LINUX || defined __FreeBSD__ || defined __OpenBSD__) && !defined AMX_NODYNALOAD
     #if defined _Windows
@@ -940,7 +940,7 @@ int AMXAPI amx_Init(AMX *amx,void *program)
         #define AMX_LIBPATH     "AMXLIB"
       #endif
     #endif
-    int numlibraries,i;
+    int numlibraries;
     AMX_FUNCSTUB *lib;
     AMX_ENTRY libinit;
   #endif
@@ -1039,7 +1039,7 @@ int AMXAPI amx_Init(AMX *amx,void *program)
   #if BYTE_ORDER==BIG_ENDIAN
   { /* local */
     AMX_FUNCSTUB *fs;
-    int i,num;
+    int num;
 
     fs=GETENTRY(hdr,natives,0);
     num=NUMENTRIES(hdr,natives,libraries);
@@ -1214,17 +1214,19 @@ int AMXAPI amx_InitJIT(AMX *amx, void *reloc_table, void *native_code)
     /* update the required memory size (the previous value was a
      * conservative estimate, now we know the exact size)
      */
-    amx->code_size = (hdr->dat + hdr->stp + 3) & ~3;
+    amx->code_size = (hdr->dat + hdr->stp + sizeof(cell)) & ~(sizeof(cell)-1);
     /* The compiled code is relocatable, since only relative jumps are
-     * used for destinations within the generated code and absoulute
-     * addresses for jumps into the runtime, which is fixed in memory.
+     * used for destinations within the generated code, and absolute
+     * addresses are only for jumps into the runtime, which is fixed
+     * in memory.
      */
+    /* set the new pointers */
     amx->base = (unsigned char*) native_code;
     amx->cip = hdr->cip;
     amx->hea = hdr->hea;
     amx->hlw = hdr->hea;
     amx->stp = hdr->stp - sizeof(cell);
-    /* also put a sentinel for strings at the top the stack */
+    /* also put a sentinel for strings at the top of the stack */
     *(cell *)((char*)native_code + hdr->dat + hdr->stp - sizeof(cell)) = 0;
     amx->stk = amx->stp;
   } /* if */
@@ -1250,11 +1252,7 @@ int AMXAPI amx_InitJIT(AMX *amx,void *compiled_program,void *reloc_table)
 int AMXAPI amx_Cleanup(AMX *amx)
 {
   #if (defined _Windows || defined LINUX || defined __FreeBSD__ || defined __OpenBSD__) && !defined AMX_NODYNALOAD
-    #if defined _Windows
-      typedef int (FAR WINAPI *AMX_ENTRY)(AMX FAR *amx);
-    #elif defined LINUX || defined __FreeBSD__ || defined __OpenBSD__
-      typedef int (*AMX_ENTRY)(AMX *amx);
-    #endif
+    typedef int AMXEXPORT (FAR *AMX_ENTRY)(AMX FAR *amx);
     AMX_HEADER *hdr;
     int numlibraries,i;
     AMX_FUNCSTUB *lib;
@@ -4388,25 +4386,27 @@ int AMXAPI amx_GetString(char *dest,const cell *source,int use_wchar,size_t size
 {
   int len=0;
   #if defined AMX_ANSIONLY
-    (void)use_wchar;
+    (void)use_wchar;    /* unused parameter (if ANSI only) */
   #endif
   if ((ucell)*source>UNPACKEDMAX) {
     /* source string is packed */
-    cell c = 0;         /* to avoid a compiler warning */
+    cell c=0;           /* initialize to 0 to avoid a compiler warning */
     int i=sizeof(cell)-1;
+    char ch;
     while ((size_t)len<size) {
       if (i==sizeof(cell)-1)
         c=*source++;
+      ch=(char)(c >> i*CHARBITS);
+      if (ch=='\0')
+        break;          /* terminating zero character found */
       #if defined AMX_ANSIONLY
-        dest[len++]=(char)(c >> i*CHARBITS);
+        dest[len++]=ch;
       #else
         if (use_wchar)
-          ((wchar_t*)dest)[len++]=(char)(c >> i*CHARBITS);
+          ((wchar_t*)dest)[len++]=ch;
         else
-          dest[len++]=(char)(c >> i*CHARBITS);
+          dest[len++]=ch;
       #endif
-      if (dest[len-1]=='\0')
-        break;          /* terminating zero character found */
       i=(i+sizeof(cell)-1) % sizeof(cell);
     } /* while */
   } else {
@@ -4424,10 +4424,19 @@ int AMXAPI amx_GetString(char *dest,const cell *source,int use_wchar,size_t size
       } /* if */
     #endif
   } /* if */
+  /* store terminator */
   if ((size_t)len>=size)
     len=size-1;
-  if (len>=0)
-    dest[len]='\0';   /* store terminator */
+  if (len>=0) {
+    #if defined AMX_ANSIONLY
+      dest[len]='\0';
+    #else
+      if (use_wchar)
+        ((wchar_t*)dest)[len]=0;
+      else
+        dest[len]='\0';
+    #endif
+  } /* IF */
   return AMX_ERR_NONE;
 }
 #endif /* AMX_XXXSTRING */

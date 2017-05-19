@@ -1,6 +1,6 @@
 /*  Core module for the Pawn AMX
  *
- *  Copyright (c) ITB CompuPhase, 1997-2006
+ *  Copyright (c) ITB CompuPhase, 1997-2008
  *
  *  This software is provided "as-is", without any express or implied warranty.
  *  In no event will the authors be held liable for any damages arising from
@@ -499,12 +499,12 @@ const AMX_NATIVE_INFO core_Natives[] = {
   { NULL, NULL }        /* terminator */
 };
 
-int AMXEXPORT amx_CoreInit(AMX *amx)
+int AMXEXPORT AMXAPI amx_CoreInit(AMX *amx)
 {
   return amx_Register(amx, core_Natives, -1);
 }
 
-int AMXEXPORT amx_CoreCleanup(AMX *amx)
+int AMXEXPORT AMXAPI amx_CoreCleanup(AMX *amx)
 {
   (void)amx;
   #if !defined AMX_NOPROPLIST
