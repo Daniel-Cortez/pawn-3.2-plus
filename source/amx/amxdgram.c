@@ -2,7 +2,7 @@
  *
  *  This module uses the UDP protocol (from the TCP/IP protocol suite).
  *
- *  Copyright (c) ITB CompuPhase, 2005-2006
+ *  Copyright (c) ITB CompuPhase, 2005-2008
  *
  *  This software is provided "as-is", without any express or implied warranty.
  *  In no event will the authors be held liable for any damages arising from
@@ -330,7 +330,7 @@ AMX_NATIVE_INFO dgram_Natives[] = {
   { NULL, NULL }        /* terminator */
 };
 
-int AMXEXPORT amx_DGramInit(AMX *amx)
+int AMXEXPORT AMXAPI amx_DGramInit(AMX *amx)
 {
   dgramBound = 0;
   if (udp_Open()==-1)
@@ -348,7 +348,7 @@ int AMXEXPORT amx_DGramInit(AMX *amx)
   return amx_Register(amx,dgram_Natives,-1);
 }
 
-int AMXEXPORT amx_DGramCleanup(AMX *amx)
+int AMXEXPORT AMXAPI amx_DGramCleanup(AMX *amx)
 {
   (void)amx;
   udp_Close();

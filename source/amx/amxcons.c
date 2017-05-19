@@ -4,7 +4,7 @@
  *  cannot always be implemented with portable C functions. In other words,
  *  these routines must be ported to other environments.
  *
- *  Copyright (c) ITB CompuPhase, 1997-2006
+ *  Copyright (c) ITB CompuPhase, 1997-2008
  *
  *  This software is provided "as-is", without any express or implied warranty.
  *  In no event will the authors be held liable for any damages arising from
@@ -22,7 +22,7 @@
  *      misrepresented as being the original software.
  *  3.  This notice may not be removed or altered from any source distribution.
  *
- *  Version: $Id: amxcons.c 3693 2007-01-02 13:36:50Z thiadmer $
+ *  Version: $Id: amxcons.c 3821 2007-10-15 16:54:20Z thiadmer $
  */
 
 #if defined _UNICODE || defined __UNICODE__ || defined UNICODE
@@ -43,8 +43,11 @@
   #include <conio.h>
   #include <malloc.h>
 #endif
-#if defined USE_CURSES
+#if defined USE_CURSES || defined HAVE_CURSES_H
   #include <curses.h>
+  #if !defined CURSES
+    #define CURSES  1
+  #endif
 #endif
 #include "amx.h"
 #if defined __WIN32__ || defined _WIN32 || defined WIN32
@@ -90,11 +93,80 @@
   int amx_termctl(int,int);
   void amx_clrscr(void);
   void amx_clreol(void);
-  void amx_gotoxy(int x,int y);
+  int amx_gotoxy(int x,int y);
   void amx_wherexy(int *x,int *y);
   unsigned int amx_setattr(int foregr,int backgr,int highlight);
   void amx_console(int columns, int lines, int flags);
+  void amx_viewsize(int *width,int *height);
   int amx_kbhit(void);
+#elif defined CURSES && CURSES != 0
+  /* Use the "curses" library to implement the console */
+  static WINDOW *curseswin;
+  #define amx_putstr(s)       printw("%s",(s))
+  #define amx_putchar(c)      addch(c)
+  #define amx_fflush()        refresh()
+  #define amx_getch()         getch()
+  #define amx_gets(s,n)       getnstr((s),(n))
+  #define amx_clrscr()        clear()
+  #define amx_clreol()        clrtoeol()
+  #define amx_gotoxy(x,y)     move((y)-1,(x)-1)
+  #define amx_console(c,l,f)  ((void)(c),(void)(l),(void)(f))
+  unsigned int amx_setattr(int foregr,int backgr,int highlight)
+  {
+    int attribs=A_NORMAL;
+    if (highlight>0)
+      attribs=(attribs & ~A_NORMAL) | A_STANDOUT;
+    attrset(attribs);
+    //??? in future, also handle colours
+  }
+  void CreateConsole(void);
+  int amx_kbhit(void)
+  {
+    int result;
+    CreateConsole();
+    nodelay(curseswin,TRUE);    /* enter non-blocking state */
+    result=getch();             /* read key (if any) */
+    nodelay(curseswin,FALSE);   /* leave non-blocking state */
+    if (result!=ERR)
+      ungetch(result);          /* a key is waiting, push it back */
+    return (result==ERR) ? 0 : 1;
+  }
+  int amx_termctl(int code,int value)
+  {
+    switch (code) {
+    case 0:           /* query terminal support */
+      return 1;
+    /* case 1: */     /* switch auto-wrap on/off (not supported in curses!) */
+    /* case 2: */     /* create/switch to another console */
+    case 3:           /* set emphasized font */
+      if (value)
+        attron(A_BOLD);
+      else
+        attroff(A_BOLD);
+      return 1;
+    /* case 4: */     /* query whether a terminal is "open" */
+    default:
+      return 0;
+    } /* switch */
+  }
+  void amx_wherexy(int *x,int *y)
+  {
+    int row,col;
+    getyx(curseswin,row,col);
+    if (x!=NULL)
+      *x=col+1;
+    if (y!=NULL)
+      *y=row+1;
+  }
+  void amx_viewsize(int *width,int *height)
+  {
+    int row,col;
+    getmaxyx(curseswin,row,col);
+    if (width!=NULL)
+      *width=col;
+    if (height!=NULL)
+      *height=row;
+  }
 #elif defined VT100 || defined LINUX || defined ANSITERM
   /* ANSI/VT100 terminal, or shell emulating "xterm" */
   #define amx_putstr(s)       printf("%s",(s))
@@ -149,12 +221,13 @@
     amx_putstr("\033[K");
     amx_fflush();        /* pump through the terminal codes */
   }
-  void amx_gotoxy(int x,int y)
+  int amx_gotoxy(int x,int y)
   {
     char str[30];
     _stprintf(str,"\033[%d;%dH",y,x);
     amx_putstr(str);
     amx_fflush();        /* pump through the terminal codes */
+    return 1;
   }
   void amx_wherexy(int *x,int *y)
   {
@@ -171,11 +244,13 @@
     for (i=0; i<8 && (val=amx_getch())!=';'; i++)
       str[i]=(char)val;
     str[i]='\0';
-    *y=atoi(str);
+    if (y!=NULL)
+      *y=atoi(str);
     for (i=0; i<8 && (val=amx_getch())!='R'; i++)
       str[i]=(char)val;
     str[i]='\0';
-    *x=atoi(str);
+    if (x!=NULL)
+      *x=atoi(str);
     #if defined ANSITERM
       val=amx_getch();
       assert(val=='\r');    /* ANSI driver adds CR to the end of the command */
@@ -218,6 +293,14 @@
     sprintf(str,"\033[8;%d;%dt",lines,columns);
     amx_putstr(str);
     amx_fflush();
+  }
+  void amx_viewsize(int *width,int *height)
+  {
+    /* a trick to get the size of the terminal is to position the cursor far
+     * away and then read it back
+     */
+    amx_gotoxy(999,999);
+    amx_wherexy(width,height);
   }
 #elif defined __WIN32__ || defined _WIN32 || defined WIN32
   /* Win32 console */
@@ -279,7 +362,7 @@
     FillConsoleOutputCharacter(hConsole,' ',dwConSize,csbi.dwCursorPosition,&cCharsWritten);
     FillConsoleOutputAttribute(hConsole,csbi.wAttributes,dwConSize,csbi.dwCursorPosition,&cCharsWritten);
   }
-  void amx_gotoxy(int x,int y)
+  int amx_gotoxy(int x,int y)
   {
     COORD point;
     CONSOLE_SCREEN_BUFFER_INFO csbi;
@@ -287,11 +370,12 @@
 
     GetConsoleScreenBufferInfo(hConsole, &csbi);
     if (x<=0 || x>csbi.dwSize.X || y<=0 || y>csbi.dwSize.Y)
-      return;
+      return 0;
     amx_fflush();       /* make sure all output is written */
     point.X=(short)(x-1);
     point.Y=(short)(y-1);
     SetConsoleCursorPosition(hConsole,point);
+    return 1;
   }
   void amx_wherexy(int *x,int *y)
   {
@@ -339,21 +423,15 @@
     rect.Bottom=(short)(lines-1);
     SetConsoleWindowInfo(GetStdHandle(STD_OUTPUT_HANDLE),TRUE,&rect);
   }
-#elif defined USE_CURSES
-  /* Use the "curses" library to implement the console */
-  #define amx_putstr(s)       printw("%s",(s))
-  #define amx_putchar(c)      addch(c)
-  #define amx_fflush()        (0)
-  #define amx_getch()         getch()
-  #define amx_gets(s,n)       getnstr(s,n)
-  #define amx_clrscr()        clear()
-  #define amx_clreol()        clrtoeol()
-  #define amx_gotoxy(x,y)     (void)(0)
-  #define amx_wherexy(x,y)    (*(x)=*(y)=0)
-  #define amx_setattr(c,b,h)  (0)
-  #define amx_termctl(c,v)    (0)
-  #define amx_console(c,l,f)  (void)(0)
-  #define amx_kbhit()         kbhit()
+  void amx_viewsize(int *width,int *height)
+  {
+    CONSOLE_SCREEN_BUFFER_INFO csbi;
+    GetConsoleScreenBufferInfo(GetStdHandle(STD_OUTPUT_HANDLE),&csbi);
+    if (width!=NULL)
+      *width=(int)csbi.dwSize.X;
+    if (height!=NULL)
+      *height=(int)(csbi.srWindow.Bottom-csbi.srWindow.Top+1);
+  }
 #else
   /* assume a streaming terminal; limited features (no colour, no cursor
    * control)
@@ -365,11 +443,12 @@
   #define amx_gets(s,n)       fgets(s,n,stdin)
   #define amx_clrscr()        (void)(0)
   #define amx_clreol()        (void)(0)
-  #define amx_gotoxy(x,y)     ((void)(x),(void)(y))
+  #define amx_gotoxy(x,y)     ((void)(x),(void)(y),(0))
   #define amx_wherexy(x,y)    (*(x)=*(y)=0)
   #define amx_setattr(c,b,h)  ((void)(c),(void)(b),(void)(h),(0))
   #define amx_termctl(c,v)    ((void)(c),(void)(v),(0))
   #define amx_console(c,l,f)  ((void)(c),(void)(l),(void)(f))
+  #define amx_viewsize        (*(x)=80,*(y)=25)
   #define amx_kbhit()         kbhit()
 #endif
 
@@ -377,24 +456,24 @@
   void CreateConsole(void)
   { static int createdconsole=0;
     if (!createdconsole) {
-  	  AllocConsole();
-  	  createdconsole=1;
-  	} /* if */
+      AllocConsole();
+      createdconsole=1;
+    } /* if */
   }
-#elif defined USE_CURSES
+#elif defined CURSES && CURSES != 0
   // The Mac OS X build variant uses curses.
   void CreateConsole(void)
   { static int createdconsole=0;
     if (!createdconsole) {
-  	  initscr();
+      curseswin=initscr();
       cbreak();
       noecho();
       nonl();
-      intrflush(stdscr, FALSE);
-      keypad(stdscr, TRUE);
-
-  	  createdconsole=1;
-  	} /* if */
+      scrollok(curseswin,TRUE);
+      intrflush(curseswin,FALSE);
+      keypad(curseswin,TRUE);
+      createdconsole=1;
+    } /* if */
   }
 #else
   #define CreateConsole()
@@ -629,9 +708,17 @@ static int dochar(AMX *amx,TCHAR ch,cell param,TCHAR sign,TCHAR decpoint,int wid
     if (width>0)
       _stprintf(formatstring+_tcslen(formatstring),__T("%d"),width);
     _stprintf(formatstring+_tcslen(formatstring),__T(".%df"),digits);
-    /* ??? decimal comma? */
     amx_GetAddr(amx,param,&cptr);
-    _stprintf(buffer,formatstring,*(float*)cptr);
+    #if PAWN_CELL_SIZE == 64
+      _stprintf(buffer,formatstring,*(double*)cptr);
+    #else
+      _stprintf(buffer,formatstring,*(float*)cptr);
+    #endif
+    if (decpoint==__T(',')) {
+      TCHAR *ptr=_tcschr(buffer,__T('.'));
+      if (ptr!=NULL)
+        *ptr=__T(',');
+    } /* if */
     f_putstr(user,buffer);
     return 1;
 #endif
@@ -993,18 +1080,19 @@ static cell AMX_NATIVE_CALL n_getchar(AMX *amx,const cell *params)
 static cell AMX_NATIVE_CALL n_getstring(AMX *amx,const cell *params)
 {
   int c,chars,max;
-  TCHAR *str;
   cell *cptr;
 
   CreateConsole();
-  max=(int)params[2];
-  if (max<=0)
-    return 0;
-
   chars=0;
-
-  str=(TCHAR *)alloca(max*sizeof(TCHAR));
-  if (str!=NULL) {
+  max=(int)params[2];
+  if (max>0) {
+    #if __STDC_VERSION__ >= 199901L
+      TCHAR str[max];   /* use C99 feature if available */
+    #else
+      TCHAR *str=(TCHAR *)alloca(max*sizeof(TCHAR));
+      if (str==NULL)
+        return chars;
+    #endif
 
     c=amx_getch();
     while (c!=EOF && c!=EOL_CHAR && chars<max-1) {
@@ -1164,8 +1252,7 @@ static cell AMX_NATIVE_CALL n_gotoxy(AMX *amx,const cell *params)
 {
   (void)amx;
   CreateConsole();
-  amx_gotoxy((int)params[1],(int)params[2]);
-  return 0;
+  return amx_gotoxy((int)params[1],(int)params[2]);
 }
 
 static cell AMX_NATIVE_CALL n_wherexy(AMX *amx,const cell *params)
@@ -1251,7 +1338,7 @@ const AMX_NATIVE_INFO console_Natives[] = {
   { NULL, NULL }        /* terminator */
 };
 
-int AMXEXPORT amx_ConsoleInit(AMX *amx)
+int AMXEXPORT AMXAPI amx_ConsoleInit(AMX *amx)
 {
   #if !defined AMXCONSOLE_NOIDLE
     /* see whether there is an @keypressed() function */
@@ -1265,7 +1352,7 @@ int AMXEXPORT amx_ConsoleInit(AMX *amx)
   return amx_Register(amx, console_Natives, -1);
 }
 
-int AMXEXPORT amx_ConsoleCleanup(AMX *amx)
+int AMXEXPORT AMXAPI amx_ConsoleCleanup(AMX *amx)
 {
   (void)amx;
   #if !defined AMXCONSOLE_NOIDLE

@@ -43,7 +43,7 @@
    #include <endian.h>
 #endif
 
-/* Linux NOW has these */
+/* Linux now has these */
 #if !defined BIG_ENDIAN
   #define BIG_ENDIAN    4321
 #endif

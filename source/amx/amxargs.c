@@ -1,6 +1,6 @@
 /*  Script Arguments support module for the Pawn Abstract Machine
  *
- *  Copyright (c) ITB CompuPhase, 2005-2006
+ *  Copyright (c) ITB CompuPhase, 2005-2008
  *
  *  This software is provided "as-is", without any express or implied warranty.
  *  In no event will the authors be held liable for any damages arising from
@@ -35,13 +35,13 @@
 #include <stdlib.h>
 #include <string.h>
 #include <assert.h>
-#if defined __WIN32__ || defined _WIN32 || defined WIN32 || defined __MSDOS__
+#include "osdefs.h"
+#if defined __WIN32__ || defined __MSDOS__
   #include <malloc.h>
 #endif
-#if defined __WIN32__ || defined _WIN32 || defined WIN32 || defined _Windows
+#if defined __WIN32__ || defined _Windows
   #include <windows.h>
 #endif
-#include "osdefs.h"
 #include "amx.h"
 
 #if defined _UNICODE
@@ -91,7 +91,7 @@ static const TCHAR *rawcmdline(void)
 {
   #if defined __WIN32__ || defined _WIN32 || defined WIN32
   #elif defined _Windows || defined __MSDOS__
-    static char cmdbuffer[128];
+    static char cmdbuffer[128];   /* DOS & Windows 3.1 are never in Unicode mode */
   #elif defined LINUX
     static char cmdbuffer[1024];  /* some arbitrary maximum */
   #endif
@@ -132,7 +132,6 @@ static const TCHAR *rawcmdline(void)
         fread(cmdbuffer, 1, fsize, fp);
         fclose(fp);
         cmdbuffer[fsize] = '\0';        /* terminate with double-zero */
-        // ??? convert to Unicode
         /* convert '\0' characters to spaces, for uniform parsing */
         for (ptr = cmdbuffer; *ptr != ' '; ptr = strchr(ptr, '\0') + 1)
           *ptr = ' ';
@@ -227,7 +226,7 @@ static const TCHAR *matcharg(const TCHAR *key, int skip, int *length)
         optlen++;               /* if ':' or '=' was found, skip it too */
       option += optlen;         /* point behind option */
       *length -= optlen;        /* length of the value, not of the option */
-      assert(length >= 0);
+      assert(*length >= 0);
       if (skip-- == 0)
         break;
     } /* if */
@@ -377,12 +376,12 @@ const AMX_NATIVE_INFO args_Natives[] = {
   { NULL, NULL }        /* terminator */
 };
 
-int AMXEXPORT amx_ArgsInit(AMX *amx)
+int AMXEXPORT AMXAPI amx_ArgsInit(AMX *amx)
 {
   return amx_Register(amx, args_Natives, -1);
 }
 
-int AMXEXPORT amx_ArgsCleanup(AMX *amx)
+int AMXEXPORT AMXAPI amx_ArgsCleanup(AMX *amx)
 {
   (void)amx;
   return AMX_ERR_NONE;
@@ -394,7 +393,7 @@ int AMXEXPORT amx_ArgsCleanup(AMX *amx)
  * that is passed in to this function is NOT copied, so it may not be freed
  * after the call.
  */
-int AMXEXPORT amx_ArgsSetCmdLine(const TCHAR *cmd)
+int AMXEXPORT AMXAPI amx_ArgsSetCmdLine(const TCHAR *cmd)
 {
   cmdline = cmd;
   return AMX_ERR_NONE;
