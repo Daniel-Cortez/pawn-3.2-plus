@@ -65,7 +65,6 @@
   #include <readline/readline.h>
   #include <readline/history.h>
 #endif
-#include "osdefs.h"     /* for _MAX_PATH */
 #include "amx.h"
 #include "amxdbg.h"
 

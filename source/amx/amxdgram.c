@@ -25,6 +25,7 @@
 
 #include <assert.h>
 #include <stdio.h>
+#include "amx.h"
 #if defined LINUX
   #include <arpa/inet.h>
   #include <netinet/in.h>
@@ -37,8 +38,6 @@
   #include <malloc.h>
   #include <winsock.h>
 #endif
-#include "osdefs.h"
-#include "amx.h"
 
 
 #define SRC_BUFSIZE     22

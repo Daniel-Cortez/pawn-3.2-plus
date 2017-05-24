@@ -27,7 +27,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include "osdefs.h"     /* for _MAX_PATH */
 #include "amx.h"
 #include "amxdbg.h"
 

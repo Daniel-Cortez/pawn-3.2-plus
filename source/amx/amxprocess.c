@@ -36,6 +36,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <assert.h>
+#include "amx.h"
 #if defined __WIN32__ || defined _WIN32 || defined WIN32 || defined _Windows
   #include <malloc.h>
 #endif
@@ -55,8 +56,6 @@
    */
   #include <ffi.h>
 #endif
-#include "osdefs.h"
-#include "amx.h"
 
 #if defined _UNICODE
 # include <tchar.h>
