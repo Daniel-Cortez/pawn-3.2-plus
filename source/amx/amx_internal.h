@@ -270,5 +270,10 @@ typedef enum {
                            ? (char *)((unsigned char*)(hdr) + (unsigned)((AMX_FUNCSTUBNT*)(entry))->nameofs) \
                            : ((AMX_FUNCSTUB*)(entry))->name )
 
+#define NUMPUBLICS(hdr)         NUMENTRIES((hdr),publics,natives)
+#define NUMNATIVES(hdr)         NUMENTRIES((hdr),natives,libraries)
+#define NUMLIBRARIES(hdr)       NUMENTRIES((hdr),libraries,pubvars)
+#define NUMPUBVARS(hdr)         NUMENTRIES((hdr),pubvars,tags)
+
 
 #endif /* AMX_INTERNAL_H_INCLUDED */

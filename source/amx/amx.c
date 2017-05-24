@@ -221,7 +221,7 @@ int AMXAPI amx_Callback(AMX *amx, cell index, cell *result, const cell *params)
     f=(AMX_NATIVETABLE)[-(index+1)];
   } else {
 #endif
-    assert(index>=0 && index<(cell)NUMENTRIES(hdr,natives,libraries));
+    assert(index>=0 && index<(cell)NUMNATIVES(hdr));
     func=GETENTRY(hdr,natives,index);
     f=(AMX_NATIVE)func->address;
 #if defined AMX_NATIVETABLE
@@ -798,7 +798,7 @@ int AMXAPI amx_Init(AMX *amx,void *program)
     int num;
 
     fs=GETENTRY(hdr,natives,0);
-    num=NUMENTRIES(hdr,natives,libraries);
+    num=NUMNATIVES(hdr);
     for (i=0; i<num; i++) {
       amx_AlignCell(&fs->address);      /* redundant, because it should be zero */
       if (USENAMETABLE(hdr))
@@ -808,7 +808,7 @@ int AMXAPI amx_Init(AMX *amx,void *program)
 
     fs=GETENTRY(hdr,publics,0);
     assert(hdr->publics<=hdr->natives);
-    num=NUMENTRIES(hdr,publics,natives);
+    num=NUMPUBLICS(hdr);
     for (i=0; i<num; i++) {
       amx_AlignCell(&fs->address);
       if (USENAMETABLE(hdr))
@@ -818,7 +818,7 @@ int AMXAPI amx_Init(AMX *amx,void *program)
 
     fs=GETENTRY(hdr,pubvars,0);
     assert(hdr->pubvars<=hdr->tags);
-    num=NUMENTRIES(hdr,pubvars,tags);
+    num=NUMPUBVARS(hdr);
     for (i=0; i<num; i++) {
       amx_AlignCell(&fs->address);
       if (USENAMETABLE(hdr))
@@ -853,7 +853,7 @@ int AMXAPI amx_Init(AMX *amx,void *program)
       root=getenv("AMXLIB");
     #endif
     hdr=(AMX_HEADER *)amx->base;
-    numlibraries=NUMENTRIES(hdr,libraries,pubvars);
+    numlibraries=NUMLIBRARIES(hdr);
     for (i=0; i<numlibraries; i++) {
       lib=GETENTRY(hdr,libraries,i);
       libname[0]='\0';
@@ -1019,7 +1019,7 @@ int AMXAPI amx_Cleanup(AMX *amx)
   #if (defined _Windows || defined LINUX || defined __FreeBSD__ || defined __OpenBSD__) && !defined AMX_NODYNALOAD
     hdr=(AMX_HEADER *)amx->base;
     assert(hdr->magic==AMX_MAGIC);
-    numlibraries=NUMENTRIES(hdr,libraries,pubvars);
+    numlibraries=NUMLIBRARIES(hdr);
     for (i=0; i<numlibraries; i++) {
       lib=GETENTRY(hdr,libraries,i);
       if (lib->address!=0) {
@@ -1141,7 +1141,7 @@ int AMXAPI amx_NumNatives(AMX *amx, int *number)
   assert(hdr!=NULL);
   assert(hdr->magic==AMX_MAGIC);
   assert(hdr->natives<=hdr->libraries);
-  *number=NUMENTRIES(hdr,natives,libraries);
+  *number=NUMNATIVES(hdr);
   return AMX_ERR_NONE;
 }
 
@@ -1154,7 +1154,7 @@ int AMXAPI amx_GetNative(AMX *amx, int index, char *funcname)
   assert(hdr!=NULL);
   assert(hdr->magic==AMX_MAGIC);
   assert(hdr->natives<=hdr->libraries);
-  if (index>=(cell)NUMENTRIES(hdr,natives,libraries))
+  if (index>=(cell)NUMNATIVES(hdr))
     return AMX_ERR_INDEX;
 
   func=GETENTRY(hdr,natives,index);
@@ -1188,7 +1188,7 @@ int AMXAPI amx_NumPublics(AMX *amx, int *number)
   assert(hdr!=NULL);
   assert(hdr->magic==AMX_MAGIC);
   assert(hdr->publics<=hdr->natives);
-  *number=NUMENTRIES(hdr,publics,natives);
+  *number=NUMPUBLICS(hdr);
   return AMX_ERR_NONE;
 }
 
@@ -1201,7 +1201,7 @@ int AMXAPI amx_GetPublic(AMX *amx, int index, char *funcname)
   assert(hdr!=NULL);
   assert(hdr->magic==AMX_MAGIC);
   assert(hdr->publics<=hdr->natives);
-  if (index>=(cell)NUMENTRIES(hdr,publics,natives))
+  if (index>=(cell)NUMPUBLICS(hdr))
     return AMX_ERR_INDEX;
 
   func=GETENTRY(hdr,publics,index);
@@ -1246,7 +1246,7 @@ int AMXAPI amx_NumPubVars(AMX *amx, int *number)
   assert(hdr!=NULL);
   assert(hdr->magic==AMX_MAGIC);
   assert(hdr->pubvars<=hdr->tags);
-  *number=NUMENTRIES(hdr,pubvars,tags);
+  *number=NUMPUBVARS(hdr);
   return AMX_ERR_NONE;
 }
 
@@ -1259,7 +1259,7 @@ int AMXAPI amx_GetPubVar(AMX *amx, int index, char *varname, cell *amx_addr)
   assert(hdr!=NULL);
   assert(hdr->magic==AMX_MAGIC);
   assert(hdr->pubvars<=hdr->tags);
-  if (index>=(cell)NUMENTRIES(hdr,pubvars,tags))
+  if (index>=(cell)NUMPUBVARS(hdr))
     return AMX_ERR_INDEX;
 
   var=GETENTRY(hdr,pubvars,index);
@@ -1448,7 +1448,7 @@ int AMXAPI amx_Register(AMX *amx, const AMX_NATIVE_INFO *list, int number)
   assert(hdr!=NULL);
   assert(hdr->magic==AMX_MAGIC);
   assert(hdr->natives<=hdr->libraries);
-  numnatives=NUMENTRIES(hdr,natives,libraries);
+  numnatives=NUMNATIVES(hdr);
 
   err=AMX_ERR_NONE;
   func=GETENTRY(hdr,natives,0);
@@ -1713,7 +1713,7 @@ static const void * const amx_opcodelist[] = {
   } else if (index<0) {
     return AMX_ERR_INDEX;
   } else {
-    if (index>=(int)NUMENTRIES(hdr,publics,natives))
+    if (index>=(int)NUMPUBLICS(hdr))
       return AMX_ERR_INDEX;
     func=GETENTRY(hdr,publics,index);
     cip=(cell *)(code + (int)func->address);
@@ -2869,7 +2869,7 @@ int AMXAPI amx_Exec(AMX *amx, cell *retval, int index)
   } else if (index<0) {
     return AMX_ERR_INDEX;
   } else {
-    if (index>=(cell)NUMENTRIES(hdr,publics,natives))
+    if (index>=(cell)NUMPUBLICS(hdr))
       return AMX_ERR_INDEX;
     func=GETENTRY(hdr,publics,index);
     cip=(cell *)(code + (int)func->address);
