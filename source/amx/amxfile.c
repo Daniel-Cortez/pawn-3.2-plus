@@ -36,31 +36,25 @@
 #include <string.h>
 #include <time.h>
 #include <sys/stat.h>
-#if defined __BORLANDC__
+#if defined HAVE_UTIME_H
   #include <utime.h>
 #else
   #include <sys/utime.h>
 #endif
-#include "osdefs.h"
+#include "amx.h"
 #if defined __WIN32__ || defined _WIN32 || defined WIN32 || defined __MSDOS__
   #include <malloc.h>
 #endif
 #if defined LINUX || defined __FreeBSD__ || defined __OpenBSD__ || defined MACOS
-  #include <io.h>
   #include <dirent.h>
+#else
+  #include <io.h>
 #endif
-#include "amx.h"
 #if defined __WIN32__ || defined _WIN32 || defined WIN32 || defined _Windows
   #include <windows.h>
 #endif
 
 #include "fpattern.c"
-
-#if !defined AMXFILE_VAR
-  #define AMXFILE_VAR   "AMXFILE"
-#elif AMXFILE_VAR==""
-  #undef AMXFILE_VAR
-#endif
 
 #if !defined sizearray
   #define sizearray(a)  (sizeof(a)/sizeof((a)[0]))
@@ -87,6 +81,14 @@
 # define _trename       rename
 # define _tstat         _stat
 # define _tutime        _utime
+#endif
+
+#if !(defined __WIN32__ || defined _WIN32 || defined WIN32)
+# define _stat(n,b)   stat(n,b)
+# define _utime(n,t)  utime(n,t)
+#elif defined _MSC_VER || defined __GNUC__
+# define stat         _stat
+# define utimbuf      _utimbuf
 #endif
 
 #if !defined UNUSED_PARAM
@@ -341,8 +343,9 @@ static char buffer[_MAX_PATH];
 
 static char *completename(TCHAR *dest, TCHAR *src, size_t size)
 {
+  TCHAR *ptr;
   #if defined AMXFILE_VAR
-    TCHAR *prefix,*ptr;
+    TCHAR *prefix;
     size_t len;
 
     /* only files below a specific path are accessible */
@@ -796,9 +799,6 @@ static cell AMX_NATIVE_CALL n_fmatch(AMX *amx, const cell *params)
 /* bool: fstat(const name[], &size = 0, &timestamp = 0, &mode = 0, &inode = 0) */
 static cell AMX_NATIVE_CALL n_fstat(AMX *amx, const cell *params)
 {
-  #if !(defined __WIN32__ || defined _WIN32 || defined WIN32)
-    #define _stat(n,b)  stat(n,b)
-  #endif
   TCHAR *name,fullname[_MAX_PATH]="";
   cell *cptr;
   int result=0;
@@ -824,9 +824,6 @@ static cell AMX_NATIVE_CALL n_fstat(AMX *amx, const cell *params)
 /* bool: fattrib(const name[], timestamp=0, attrib=0x0f) */
 static cell AMX_NATIVE_CALL n_fattrib(AMX *amx, const cell *params)
 {
-  #if !(defined __WIN32__ || defined _WIN32 || defined WIN32)
-    #define _utime(n,t)  utime(n,t)
-  #endif
   TCHAR *name,fullname[_MAX_PATH]="";
   int result=0;
 

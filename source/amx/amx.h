@@ -26,10 +26,8 @@
 
 #include <stdlib.h>   /* for size_t */
 #include <limits.h>
+#include "osdefs.h"
 
-#if defined FREEBSD && !defined __FreeBSD__
-  #define __FreeBSD__
-#endif
 #if defined LINUX || defined __FreeBSD__ || defined __OpenBSD__
   #include <sclinux.h>
 #endif
@@ -75,11 +73,6 @@
     #endif
   #endif
   #define HAVE_STDINT_H
-#endif
-#if defined _LP64 || defined WIN64 || defined _WIN64
-  #if !defined __64BIT__
-    #define __64BIT__
-  #endif
 #endif
 
 #if HAVE_ALLOCA_H

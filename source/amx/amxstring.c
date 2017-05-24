@@ -26,7 +26,6 @@
 #if defined __WIN32__ || defined _WIN32 || defined WIN32 || defined __MSDOS__
   #include <malloc.h>
 #endif
-#include "osdefs.h"
 #include "amx.h"
 #if defined __WIN32__ || defined _WIN32 || defined WIN32 || defined _Windows
   #include <windows.h>

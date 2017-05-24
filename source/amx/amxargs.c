@@ -35,14 +35,13 @@
 #include <stdlib.h>
 #include <string.h>
 #include <assert.h>
-#include "osdefs.h"
+#include "amx.h"
 #if defined __WIN32__ || defined __MSDOS__
   #include <malloc.h>
 #endif
 #if defined __WIN32__ || defined _Windows
   #include <windows.h>
 #endif
-#include "amx.h"
 
 #if defined _UNICODE
 # include <tchar.h>
