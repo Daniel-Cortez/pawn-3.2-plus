@@ -48,6 +48,10 @@
   #define SOCKET_ERROR -1
 #endif
 
+#if !defined isdigit
+  #define isdigit(c)     ((unsigned)((c)-'0')<10u)
+#endif
+
 static int sLocal;
 
 static unsigned long udp_GetHostAddr(const char *host,int index)

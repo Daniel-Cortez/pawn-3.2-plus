@@ -1,6 +1,8 @@
 /*  Pawn Abstract Machine (for the Pawn language)
  *  Declarations and definitions for internal use in the Abstract Machine.
  *
+ *  This code was derived from code carrying the following copyright notice:
+ *
  *  Copyright (c) ITB CompuPhase, 1997-2008
  *
  *  This software is provided "as-is", without any express or implied warranty.
@@ -23,6 +25,16 @@
 #ifndef AMX_INTERNAL_H_INCLUDED
 #define AMX_INTERNAL_H_INCLUDED
 
+
+#if (!defined AMX_PTR_SIZE) || (AMX_PTR_SIZE*8>PAWN_CELL_SIZE)
+  #define AMX_DONT_RELOCATE
+#endif
+
+/* The macros below are supposed to inhibit compiler warnings about conversion
+ * from pointer types (void*, cell* etc.) to integral types and vice versa.
+ */
+#define PTR_TO_MEMSIZE(addr)            ((size_t)0|(size_t)(addr))
+#define PTR_TO_CELLPTR(addr)            ((cell *)(void *)(addr))
 
 /* When one or more of the AMX_funcname macros are defined, we want
  * to compile only those functions. However, when none of these macros
@@ -275,5 +287,83 @@ typedef enum {
 #define NUMLIBRARIES(hdr)       NUMENTRIES((hdr),libraries,pubvars)
 #define NUMPUBVARS(hdr)         NUMENTRIES((hdr),pubvars,tags)
 
+#if defined AMX_DONT_RELOCATE
+  #define JUMPABS(base,ip)      ((cell *)((base) + *(ip)))
+  #define RELOC_ABS(base,off)   ((void)(base),(void)(off))
+  #define RELOC_VALUE(base,v)   ((void)(base),(void)(v))
+#else
+  #define JUMPABS(base,ip)      ((cell *)*(ip))
+  #define RELOC_ABS(base,off) \
+    (*(ucell *)PTR_TO_CELLPTR((size_t)(base)+(size_t)(off))+=(ucell)PTR_TO_MEMSIZE(base))
+  #define RELOC_VALUE(base,v)   ((v)+((ucell)(base)))
+#endif
+
+#define DBGPARAM(v)     ( (v)=*(cell *)(code+(int)cip), cip+=sizeof(cell) )
+
+#ifndef AMX_DONT_RELOCATE
+  #if (defined __GNUC__ && !defined __STRICT_ANSI__) || \
+      defined __ICC || defined ASM32 || defined JIT
+    #define AMX_EXEC_USE_JUMP_TABLE
+  #endif
+#endif
+
+#ifndef __has_builtin
+  #define __has_builtin(x)      0
+#endif
+
+#if defined __clang__ && __has_builtin(__builtin_expect)|| \
+    defined __GNUC__ && !defined __clang__ && __GNUC__>2 || \
+    defined __INTEL_COMPILER || \
+    defined __IBMC__ && __IBMC__>=900 || defined __IBMCPP__ && __IBMCPP__>=900
+  #define AMX_LIKELY(x)         __builtin_expect(!!(x), 1)
+  #define AMX_UNLIKELY(x)       __builtin_expect((x), 0)
+#else
+  #define AMX_LIKELY(x)         (x)
+  #define AMX_UNLIKELY(x)       (x)
+#endif
+
+#ifndef NDEBUG
+  #define AMX_UNREACHABLE()     assert(0)
+#elif defined __clang__ && __has_builtin(__builtin_unreachable) || \
+    defined __GNUC__ && !defined __clang__ && (__GNUC__>4 || __GNUC__==4 && __GNUC_MINOR__>=5)
+  #define AMX_UNREACHABLE()     __builtin_unreachable()
+#elif defined _MSC_VER && (defined _M_IX86 || defined _M_X64 || defined _M_ARM)
+  #define AMX_UNREACHABLE()     __assume(0)
+#else
+  #define AMX_UNREACHABLE()
+#endif
+
+#if defined __GNUC__
+  #define AMX_USE_REGISTER_VARIABLES (1)
+#else
+  #define AMX_USE_REGISTER_VARIABLES (0)
+#endif
+#if AMX_USE_REGISTER_VARIABLES
+  #define AMX_REGISTER_VAR register
+#else
+  #define AMX_REGISTER_VAR
+#endif
+
+#define IS_INVALID_CODE_OFFS(offs,codesize) \
+                        AMX_UNLIKELY( \
+                          ((ucell)(offs)>=(codesize)) || \
+                          (((ucell)(offs)&(ucell)(sizeof(cell)-1))!=0) )
+#define IS_INVALID_DATA_OFFS(offs,datasize) \
+                        AMX_UNLIKELY( \
+                          (ucell)(offs)>=(datasize))
+
+#if defined AMX_DONT_RELOCATE
+  #define IS_INVALID_CODE_OFFS_RELOC(offs) \
+                        IS_INVALID_CODE_OFFS(offs)
+  #define IS_INVALID_DATA_OFFS_RELOC(offs) \
+                        IS_INVALID_DATA_OFFS(offs)
+#else
+  #define IS_INVALID_CODE_OFFS_RELOC(offs) \
+                        ((ucell)(offs)<(ucell)PTR_TO_CELL(code)) || \
+                        ((ucell)(offs)>=(ucell)PTR_TO_CELL(code+(size_t)codesize)) || \
+                        (((ucell)(offs)&(ucell)(sizeof(cell)-1))!=0) )
+  #define IS_INVALID_DATA_OFFS_RELOC(offs) \
+                        IS_INVALID_DATA_OFFS(offs)
+#endif
 
 #endif /* AMX_INTERNAL_H_INCLUDED */

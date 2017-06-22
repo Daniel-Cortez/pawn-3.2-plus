@@ -75,7 +75,7 @@
   #define HAVE_STDINT_H
 #endif
 
-#if HAVE_ALLOCA_H
+#if defined HAVE_ALLOCA_H
   #include <alloca.h>
 #endif
 #if defined __WIN32__ || defined _WIN32 || defined WIN32 /* || defined __MSDOS__ */

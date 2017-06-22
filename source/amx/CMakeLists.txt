@@ -1,35 +1,62 @@
 project(pawnamx C)
-cmake_minimum_required(VERSION 2.8)
+cmake_minimum_required(VERSION 2.6)
 
-# check for optional include files
-include(CheckIncludeFile)
-check_include_file("unistd.h" HAVE_UNISTD_H)
-if(HAVE_UNISTD_H)
-  add_definitions(-DHAVE_UNISTD_H)
-endif()
-check_include_file("inttypes.h" HAVE_INTTYPES_H)
-if(HAVE_INTTYPES_H)
-  add_definitions(-DHAVE_INTTYPES_H)
-endif()
-check_include_file("stdint.h" HAVE_STDINT_H)
-if(HAVE_STDINT_H)
-  add_definitions(-DHAVE_STDINT_H)
-endif()
-check_include_file("alloca.h" HAVE_ALLOCA_H)
-if(HAVE_ALLOCA_H)
-  add_definitions(-DHAVE_ALLOCA_H)
-endif()
-check_include_file("utime.h" HAVE_UTIME_H)
-if(HAVE_ALLOCA_H)
-  add_definitions(-DHAVE_UTIME_H)
+
+# Initialize variables for compile flags
+set(PAWNAMX_COMPILE_FLAGS "")
+set(SHARED_INCLUDE_PATHS "")
+
+option(PAWN_USE_64BIT_CELLS "Use 64-bit cells (default: 32)" OFF)
+include("${CMAKE_CURRENT_SOURCE_DIR}/SharedCompileFlags.cmake")
+add_definitions(${SHARED_COMPILE_FLAGS})
+
+option(PAWN_NO_RUNTIME_CHECKS "Disable runtime checks" OFF)
+if(PAWN_NO_RUNTIME_CHECKS)
+  set(PAWNAMX_COMPILE_FLAGS "${PAWNAMX_COMPILE_FLAGS} -DAMX_NO_RUNTIME_CHECKS")
 endif()
 
-add_definitions(-DFLOATPOINT -DFIXEDPOINT)
+# Add an option to build AMX extensions as dynamic libraries (*.dll, *.so etc.)
+option(PAWN_AMX_EXTS_SHARED "Build AMX extension modules as dynamic libraries" ON)
+if(NOT PAWN_AMX_EXTS_SHARED)
+  set(PAWNAMX_COMPILE_FLAGS "${PAWNAMX_COMPILE_FLAGS} -DAMX_NODYNALOAD")
+endif()
+
+# Only relocate P-Code on supported compilers
+set(PAWNAMX_RELOCATE_PCODE FALSE)
+foreach(COMPILER_ID "GNU" "Clang" "AppleClang" "Intel")
+  if(CMAKE_CC_COMPILER_ID MATCHES COMPILER_ID)
+    set(PAWNAMX_RELOCATE_PCODE TRUE)
+  endif()
+endforeach()
+# Also disable relocation if Pawn cell can't fit a pointer
+if(PAWNAMX_RELOCATE_PCODE)
+  math(EXPR PAWNAMX_POINTER_SIZE "${CMAKE_SIZEOF_VOID_P} * 8")
+  if(PAWNAMX_POINTER_SIZE GREATER PAWNAMX_CELL_SIZE)
+    set(PAWNAMX_RELOCATE_PCODE FALSE)
+  endif()
+endif()
+set(PAWNAMX_COMPILE_FLAGS "${PAWNAMX_COMPILE_FLAGS} -DAMX_PTR_SIZE=${CMAKE_SIZEOF_VOID_P}")
+if(NOT PAWNAMX_RELOCATE_PCODE)
+  set(PAWNAMX_COMPILE_FLAGS "${PAWNAMX_COMPILE_FLAGS} -DAMX_DONT_RELOCATE")
+endif()
+
+# Get rid of some useless warning messages
+if(WIN32 AND MSVC)
+  add_definitions("/D_CRT_SECURE_NO_WARNINGS")
+  set(PAWNAMX_COMPILE_FLAGS "${PAWNAMX_COMPILE_FLAGS} /wd4996")
+endif()
+if(CMAKE_C_COMPILER_ID MATCHES "Clang")
+  set(PAWNAMX_COMPILE_FLAGS "${PAWNAMX_COMPILE_FLAGS} -w")
+endif()
+
+# Set shared include paths
+set(SHARED_INCLUDE_PATHS "${SHARED_INCLUDE_PATHS}" "${CMAKE_CURRENT_SOURCE_DIR}")
+
+# Include "source/linux" on Unix-like systems
 if(UNIX)
-  add_definitions(-DLINUX)
-  check_include_file("ffi.h" HAVE_FFI_H)
-  include_directories(${CMAKE_CURRENT_SOURCE_DIR}/../linux)
+  set(SHARED_INCLUDE_PATHS "${SHARED_INCLUDE_PATHS}" "${CMAKE_CURRENT_SOURCE_DIR}/../linux")
 endif()
+
 if(WIN32)
   add_definitions(-DAMXEXPORT=__stdcall -DAMX_NATIVE_CALL=__stdcall -DSTDECL)
   if(NOT BORLAND)
@@ -37,191 +64,144 @@ if(WIN32)
   endif()
 endif()
 
+include_directories("${SHARED_INCLUDE_PATHS}")
+add_definitions(-DFLOATPOINT -DFIXEDPOINT)
+
 # --------------------------------------------------------------------------
-# Extension modules
-
-# amxArgs
-set(ARGS_SRCS amxargs.c amx.c)
-add_library(amxArgs SHARED ${ARGS_SRCS})
-set_target_properties(amxArgs PROPERTIES PREFIX "")
-if(WIN32)
-  set(ARGS_SRCS ${ARGS_SRCS} dllmain.c amxargs.rc)
-  if(BORLAND)
-    # Borland linker uses a DEF file if one is in the output directory
-    configure_file(${CMAKE_CURRENT_SOURCE_DIR}/amxargs.def
-                   ${CMAKE_BINARY_DIR}/amxargs.def
-                   COPYONLY)
-  else()
-    # For Microsoft Visual C/C++ we can set explicit flags for exports
-    set_target_properties(amxArgs PROPERTIES LINK_FLAGS
-      "/export:amx_ArgsInit /export:amx_ArgsCleanup /export:amx_ArgsSetCmdLine")
-  endif()
+# AMX static library
+set(PAWNAMX_SRCS
+  "amx.h"
+  "amx_internal.h"
+  "amx.c"
+  "amx_verifier.c"
+  "amxaux.h"
+  "amxaux.c"
+  "amxdbg.h"
+  "amxdbg.c"
+  "osdefs.h"
+)
+if(UNIX)
+  set(PAWNAMX_SRCS "${PAWNAMX_SRCS}"
+    "../linux/binreloc.h"
+    "../linux/binreloc.c"
+    "../linux/getch.h"
+    "../linux/getch.c"
+  )
+  set(PAWNAMX_COMPILE_FLAGS "${PAWNAMX_COMPILE_FLAGS} -DENABLE_BINRELOC")
 endif()
-
-# amxDGram
-set(DGRAM_SRCS amxdgram.c amx.c)
-add_library(amxDGram SHARED ${DGRAM_SRCS})
-set_target_properties(amxDGram PROPERTIES PREFIX "")
-if(WIN32)
-  set(DGRAM_SRCS ${DGRAM_SRCS} dllmain.c amxargs.rc)
-  if(BORLAND)
-    configure_file(${CMAKE_CURRENT_SOURCE_DIR}/amxdgram.def
-                   ${CMAKE_BINARY_DIR}/amxdgram.def
-                   COPYONLY)
-  else()
-    set_target_properties(amxDGram PROPERTIES LINK_FLAGS
-      "/export:amx_DGramInit /export:amx_DGramCleanup")
-  endif()
+add_library(pawnamx STATIC ${PAWNAMX_SRCS})
+if(UNIX AND NOT APPLE AND PAWN_AMX_EXTS_SHARED)
+  target_link_libraries(pawnamx dl)
   target_link_libraries(amxDGram ws2_32)
 endif()
-
-# amxFile
-set(FILE_SRCS amxfile.c amx.c)
-add_library(amxFile SHARED ${FILE_SRCS})
-set_target_properties(amxFile PROPERTIES PREFIX "")
-if(WIN32)
-  set(FILE_SRCS ${FILE_SRCS} dllmain.c amxfile.rc)
-  if(BORLAND)
-    configure_file(${CMAKE_CURRENT_SOURCE_DIR}/amxfile.def
-                   ${CMAKE_BINARY_DIR}/amxfile.def
-                   COPYONLY)
-  else()
-    set_target_properties(amxFile PROPERTIES LINK_FLAGS
-      "/export:amx_FileInit /export:amx_FileCleanup")
-  endif()
+set_target_properties(pawnamx PROPERTIES
+  COMPILE_FLAGS "${PAWNAMX_COMPILE_FLAGS} ${SHARED_COMPILE_FLAGS}"
+)
+if(MINGW)
+  set_target_properties(pawnamx PROPERTIES COMPILE_FLAGS "-std=gnu90")
 endif()
 
-# amxFixed
-set(FIXED_SRCS fixed.c amx.c)
-add_library(amxFixed SHARED ${FIXED_SRCS})
-set_target_properties(amxFixed PROPERTIES PREFIX "")
-if(WIN32)
-  set(FIXED_SRCS ${FIXED_SRCS} dllmain.c amxfixed.rc)
-  if(BORLAND)
-    configure_file(${CMAKE_CURRENT_SOURCE_DIR}/amxfixed.def
-                   ${CMAKE_BINARY_DIR}/amxfixed.def
-                   COPYONLY)
+# Export shared definitions
+set_target_properties(pawnamx PROPERTIES "SHARED_COMPILE_FLAGS" "${SHARED_COMPILE_FLAGS}")
+set_target_properties(pawnamx PROPERTIES "SHARED_INCLUDE_PATHS" "${SHARED_INCLUDE_PATHS}")
+
+
+# --------------------------------------------------------------------------
+# Extension modules
+set(AMX_STATIC_EXTS_LIST "")
+
+function(ADD_AMX_EXT_MODULE NAME ENABLED SOURCES)
+  string(TOUPPER ${NAME} UPPERCASE_NAME)
+  if(NAME STREQUAL "Core" OR NAME STREQUAL "Console")
+    # Modules Core and Console are neither shared nor optional
+    set(MODULE_SHARED OFF)
+    set(PAWN_AMX_EXT_${UPPERCASE_NAME} ON)
   else()
-    set_target_properties(amxFixed PROPERTIES LINK_FLAGS
-      "/export:amx_FixedInit /export:amx_FixedCleanup")
+    set(MODULE_SHARED ${PAWN_AMX_EXTS_SHARED})
+    option(PAWN_AMX_EXT_${UPPERCASE_NAME} "Enable AMX extension module ${NAME}" ${ENABLED})
   endif()
+  if(PAWN_AMX_EXT_${UPPERCASE_NAME})
+    string(TOLOWER ${NAME} LOWERCASE_NAME)
+    set(SOURCES ${SOURCES} "amx.h")
+    set(MODULE_SHARED ${PAWN_AMX_EXTS_SHARED})
+    if(MODULE_SHARED)
+      if(NAME STREQUAL "Core" OR NAME STREQUAL "Console")
+        set(MODULE_SHARED OFF)
+      endif()
+    endif()
+    if(MODULE_SHARED)
+      if(WIN32)
+        set(SOURCES ${SOURCES} "dllmain.c")
+        file(GLOB FILE_VAR "amx${LOWERCASE_NAME}.rc")
+        if(FILE_VAR)
+          set(SOURCES ${SOURCES} "amx${LOWERCASE_NAME}.rc")
+        endif()
+      endif() # WIN32
+      add_library(amx${NAME} SHARED ${SOURCES})
+      target_link_libraries(amx${NAME} pawnamx)
+      if(WIN32)
+        if(BORLAND)
+          # Borland linker uses a DEF file if one is in the output directory
+          configure_file("${CMAKE_CURRENT_SOURCE_DIR}/amx${LOWERCASE_NAME}.def"
+                         "${CMAKE_BINARY_DIR}/amx${LOWERCASE_NAME}.def"
+                         COPYONLY
+          )
+        elseif(MSVC)
+          # For Microsoft Visual C/C++ we can set explicit flags for exports
+          set(EXPORT_FLAGS "/export:amx_${NAME}Init /export:amx_${NAME}Cleanup")
+          if(NAME STREQUAL "Args")
+            set(EXPORT_FLAGS "${EXPORT_FLAGS} /export:amx_ArgsSetCmdLine")
+          endif()
+          set_target_properties(amx${NAME} PROPERTIES LINK_FLAGS "${EXPORT_FLAGS}")
+        endif()
+      endif() # WIN32
+    else() # MODULE_SHARED
+      add_library(amx${NAME} STATIC ${SOURCES})
+      target_link_libraries(amx${NAME} pawnamx)
+      set(AMX_STATIC_EXTS_LIST "${AMX_STATIC_EXTS_LIST}" "amx${NAME}" PARENT_SCOPE)
+    endif() # MODULE_SHARED
+    set_target_properties(amx${NAME} PROPERTIES PREFIX "")
+    if(WIN32)
+      if(NAME STREQUAL "DGram")
+        target_link_libraries(amx${NAME} wsock32)
+      endif()
+    endif()
+  endif() # PAWN_AMX_EXT_${UPPERCASE_NAME}
+endfunction()
+
+add_amx_ext_module("Core" ON "amxcore.c")
+add_amx_ext_module("Float" ON "float.c")
+add_amx_ext_module("Args" ON "amxargs.c")
+add_amx_ext_module("DGram" ON "amxdgram.c")
+add_amx_ext_module("Console" ON "amxcons.h;amxcons.c")
+add_amx_ext_module("String" ON "amxcons.h;amxcons.c;amxstring.c")
+add_amx_ext_module("Time" ON "amxtime.c")
+add_amx_ext_module("Process" OFF "amxprocess.c")
+
+option(PAWN_AMX_EXT_CONSOLE_IDLE "Enable @keypressed() callback in AMX extension module Console" ON)
+if(NOT PAWN_AMX_EXT_CONSOLE_IDLE)
+  set_target_properties(amxConsole PROPERTIES COMPILE_FLAGS "-DAMXCONSOLE_NOIDLE")
 endif()
-if(UNIX)
-  target_link_libraries(amxFixed m)
+option(PAWN_AMX_EXT_TIME_IDLE "Enable @timer() callback in AMX extension module Time" ON)
+if(NOT PAWN_AMX_EXT_TIME_IDLE)
+  set_target_properties(amxTime PROPERTIES COMPILE_FLAGS "-DAMXTIME_NOIDLE")
 endif()
 
-# amxFloat
-set(FLOAT_SRCS float.c amx.c)
-add_library(amxFloat SHARED ${FLOAT_SRCS})
-set_target_properties(amxFloat PROPERTIES PREFIX "")
-if(WIN32)
-  set(FLOAT_SRCS ${FLOAT_SRCS} dllmain.c amxfloat.rc)
-  if(BORLAND)
-    configure_file(${CMAKE_CURRENT_SOURCE_DIR}/amxfloat.def
-                   ${CMAKE_BINARY_DIR}/amxfloat.def
-                   COPYONLY)
-  else()
-    set_target_properties(amxFloat PROPERTIES LINK_FLAGS
-      "/export:amx_FloatInit /export:amx_FloatCleanup")
-  endif()
-endif()
-if(UNIX)
-  target_link_libraries(amxFloat m)
-endif()
+target_link_libraries(pawnamx "${AMX_STATIC_EXTS_LIST}")
 
-# amxProcess
-set(PROCESS_SRCS amxprocess.c amx.c)
-if(WIN32)
-  add_library(amxProcess SHARED ${PROCESS_SRCS})
-else()
-  if(HAVE_FFI_H)
-    add_library(amxProcess SHARED ${PROCESS_SRCS})
-  else()
-    MESSAGE(SEND_ERROR "amxProcess requires libffi,"
-                       "see http://sources.redhat.com/libffi/")
-    MESSAGE(SEND_ERROR "libffi is not available (foreign function interface)")
-  endif()
-endif()
-set_target_properties(amxProcess PROPERTIES PREFIX "")
-if(WIN32)
-  set(PROCESS_SRCS ${PROCESS_SRCS} dllmain.c amxprocess.rc)
-  if(BORLAND)
-    configure_file(${CMAKE_CURRENT_SOURCE_DIR}/amxprocess.def
-                   ${CMAKE_BINARY_DIR}/amxprocess.def
-                   COPYONLY)
-  else()
-    set_target_properties(amxProcess PROPERTIES LINK_FLAGS
-      "/export:amx_ProcessInit /export:amx_ProcessCleanup")
-  endif()
-endif()
-if(UNIX)
-  target_link_libraries(amxProcess dl)
-endif()
-
-# amxString
-set(STRING_SRCS amxstring.c amx.c amxcons.c)
-add_library(amxString SHARED ${STRING_SRCS})
-set_target_properties(amxString PROPERTIES PREFIX "")
-if(WIN32)
-  set(STRING_SRCS ${STRING_SRCS} dllmain.c amxstring.rc)
-  if(BORLAND)
-    configure_file(${CMAKE_CURRENT_SOURCE_DIR}/amxstring.def
-                   ${CMAKE_BINARY_DIR}/amxstring.def
-                   COPYONLY)
-  else()
-    set_target_properties(amxString PROPERTIES LINK_FLAGS
-      "/export:amx_StringInit /export:amx_StringCleanup")
-  endif()
-endif()
-
-# amxTime
-set(TIME_SRCS amxtime.c amx.c)
-add_library(amxTime SHARED ${TIME_SRCS})
-set_target_properties(amxTime PROPERTIES PREFIX "")
-if(WIN32)
-  set(TIME_SRCS ${TIME_SRCS} dllmain.c amxtime.rc)
-  if(BORLAND)
-    configure_file(${CMAKE_CURRENT_SOURCE_DIR}/amxtime.def
-                   ${CMAKE_BINARY_DIR}/amxtime.def
-                   COPYONLY)
-  else()
-    set_target_properties(amxTime PROPERTIES LINK_FLAGS
-      "/export:amx_TimeInit /export:amx_TimeCleanup")
-  endif()
-endif()
 
 # --------------------------------------------------------------------------
 # Simple run-time (example program)
 
-set(PAWNRUN_SRCS pawnrun.c amx.c amxcore.c amxcons.c amxdbg.c)
-if(UNIX)
-  set(PAWNRUN_SRCS
-    ${PAWNRUN_SRCS}
-    ${CMAKE_CURRENT_SOURCE_DIR}/../linux/getch.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/../linux/binreloc.c
-  )
-endif()
-ADD_EXECUTABLE(pawnrun ${PAWNRUN_SRCS})
-set_target_properties(pawnrun PROPERTIES
-  COMPILE_FLAGS -DAMXDBG
-  COMPILE_FLAGS -DENABLE_BINRELOC
-)
-if(UNIX)
-  target_link_libraries(pawnrun dl)
-endif()
+set(PAWNRUN_SRCS "pawnrun.c")
+add_executable(pawnrun ${PAWNRUN_SRCS})
+set_target_properties(pawnrun PROPERTIES COMPILE_FLAGS -DAMXDBG)
+target_link_libraries(pawnrun pawnamx)
+
 
 # --------------------------------------------------------------------------
 # Simple console debugger
 
-set(PAWNDBG_SRCS pawndbg.c amx.c amxcore.c amxcons.c amxdbg.c)
-if(UNIX)
-  set(PAWNDBG_SRCS
-    ${PAWNDBG_SRCS} ${CMAKE_CURRENT_SOURCE_DIR}/../linux/getch.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/../linux/binreloc.c
-  )
-endif()
-ADD_EXECUTABLE(pawndbg ${PAWNDBG_SRCS})
-set_target_properties(pawndbg PROPERTIES COMPILE_FLAGS -DENABLE_BINRELOC)
-if(UNIX)
-  target_link_libraries(pawndbg dl)
-endif()
+set(PAWNDBG_SRCS "pawndbg.c")
+add_executable(pawndbg ${PAWNDBG_SRCS})
+target_link_libraries(pawndbg pawnamx)

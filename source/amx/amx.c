@@ -61,6 +61,27 @@
 
 #include "amx_internal.h"
 
+#ifdef AMX_INIT
+ #ifdef AMX_PTR_SIZE
+    #ifdef __cplusplus
+    extern "C" {
+    #endif /* __cplusplus */
+    int VerifyRelocateBytecode(AMX *amx);
+    #ifdef __cplusplus
+    }
+    #endif /* __cplusplus */
+  #else
+    /* pawndisasm is compiled with amx.c, but without amx_verifier.c,
+       so we'll use a dummy function here instead.
+    */
+    static int VerifyRelocateBytecode(AMX *amx)
+    {
+      (void)amx;
+      return AMX_ERR_NONE;
+    }
+  #endif
+#endif
+
 
 #if !defined NDEBUG
   static int check_endian(void)
@@ -278,347 +299,7 @@ int AMXAPI amx_Callback(AMX *amx, cell index, cell *result, const cell *params)
   extern int AMXAPI asm_runJIT(void *sourceAMXbase, void *jumparray, void *compiledAMXbase);
 #endif
 
-#if PAWN_CELL_SIZE==16 || defined AMX_DONT_RELOCATE
-  #define JUMPABS(base,ip)      ((cell *)((base) + *(ip)))
-  #define RELOC_ABS(base, off)
-  #define RELOC_VALUE(base, v)
-#else
-  #define JUMPABS(base, ip)     ((cell *)*(ip))
-  #define RELOC_ABS(base, off)  (*(ucell *)((base)+(int)(off)) += (ucell)(base))
-  #define RELOC_VALUE(base, v)  ((v)+((ucell)(base)))
-#endif
-
-#define DBGPARAM(v)     ( (v)=*(cell *)(code+(int)cip), cip+=sizeof(cell) )
-
 #if defined AMX_INIT
-
-static int amx_BrowseRelocate(AMX *amx)
-{
-  AMX_HEADER *hdr;
-  unsigned char *code;
-  cell cip;
-  long codesize;
-  OPCODE op;
-  int sysreq_flg;
-  #if defined __GNUC__ || defined __ICC || defined ASM32 || defined JIT
-    cell *opcode_list;
-  #endif
-  #if defined JIT
-    int opcode_count = 0;
-    int reloc_count = 0;
-  #endif
-
-  assert(amx!=NULL);
-  hdr=(AMX_HEADER *)amx->base;
-  assert(hdr!=NULL);
-  assert(hdr->magic==AMX_MAGIC);
-  code=amx->base+(int)hdr->cod;
-  codesize=hdr->dat - hdr->cod;
-  amx->flags|=AMX_FLAG_BROWSE;
-
-  /* sanity checks */
-  assert_static(OP_PUSH_PRI==36);
-  assert_static(OP_PROC==46);
-  assert_static(OP_SHL==65);
-  assert_static(OP_SMUL==72);
-  assert_static(OP_EQ==95);
-  assert_static(OP_INC_PRI==107);
-  assert_static(OP_MOVS==117);
-  assert_static(OP_SYMBOL==126);
-  assert_static(OP_LOAD_BOTH==154);
-
-  amx->sysreq_d=0;      /* preset */
-  sysreq_flg=0;
-  #if defined __GNUC__ || defined __ICC || defined ASM32 || defined JIT
-    amx_Exec(amx, (cell*)(void*)&opcode_list, 0);
-  #endif
-
-  /* start browsing code */
-  for (cip=0; cip<codesize; ) {
-    op=(OPCODE) *(ucell *)(code+(int)cip);
-    if ((unsigned)op>=OP_NUM_OPCODES) {
-      amx->flags &= ~AMX_FLAG_BROWSE;
-      return AMX_ERR_INVINSTR;
-    } /* if */
-    #if defined __GNUC__ || defined __ICC || defined ASM32 || defined JIT
-      /* relocate opcode (only works if the size of an opcode is at least
-       * as big as the size of a pointer (jump address); so basically we
-       * rely on the opcode and a pointer being 32-bit
-       */
-      *(cell *)(code+(int)cip) = opcode_list[op];
-    #endif
-    #if defined JIT
-      opcode_count++;
-    #endif
-    cip+=sizeof(cell);
-    switch (op) {
-#if !defined AMX_NO_MACRO_INSTR
-    case OP_PUSH5_C:    /* instructions with 5 parameters */
-    case OP_PUSH5:
-    case OP_PUSH5_S:
-    case OP_PUSH5_ADR:
-      cip+=sizeof(cell)*5;
-      break;
-
-    case OP_PUSH4_C:    /* instructions with 4 parameters */
-    case OP_PUSH4:
-    case OP_PUSH4_S:
-    case OP_PUSH4_ADR:
-      #if defined AMX_NO_MACRO_INSTR
-        amx->flags &= ~AMX_FLAG_BROWSE;
-        return AMX_ERR_INVINSTR;
-      #endif
-      cip+=sizeof(cell)*4;
-      break;
-
-    case OP_PUSH3_C:    /* instructions with 3 parameters */
-    case OP_PUSH3:
-    case OP_PUSH3_S:
-    case OP_PUSH3_ADR:
-      #if defined AMX_NO_MACRO_INSTR
-        amx->flags &= ~AMX_FLAG_BROWSE;
-        return AMX_ERR_INVINSTR;
-      #endif
-      cip+=sizeof(cell)*3;
-      break;
-
-    case OP_PUSH2_C:    /* instructions with 2 parameters */
-    case OP_PUSH2:
-    case OP_PUSH2_S:
-    case OP_PUSH2_ADR:
-    case OP_LOAD_BOTH:
-    case OP_LOAD_S_BOTH:
-    case OP_CONST:
-    case OP_CONST_S:
-      #if defined AMX_NO_MACRO_INSTR
-        amx->flags &= ~AMX_FLAG_BROWSE;
-        return AMX_ERR_INVINSTR;
-      #endif
-      cip+=sizeof(cell)*2;
-      break;
-#endif /* !defined AMX_NO_MACRO_INSTR */
-
-    case OP_LOAD_PRI:   /* instructions with 1 parameter */
-    case OP_LOAD_ALT:
-    case OP_LOAD_S_PRI:
-    case OP_LOAD_S_ALT:
-    case OP_LREF_PRI:
-    case OP_LREF_ALT:
-    case OP_LREF_S_PRI:
-    case OP_LREF_S_ALT:
-    case OP_LODB_I:
-    case OP_CONST_PRI:
-    case OP_CONST_ALT:
-    case OP_ADDR_PRI:
-    case OP_ADDR_ALT:
-    case OP_STOR_PRI:
-    case OP_STOR_ALT:
-    case OP_STOR_S_PRI:
-    case OP_STOR_S_ALT:
-    case OP_SREF_PRI:
-    case OP_SREF_ALT:
-    case OP_SREF_S_PRI:
-    case OP_SREF_S_ALT:
-    case OP_STRB_I:
-    case OP_LIDX_B:
-    case OP_IDXADDR_B:
-    case OP_ALIGN_PRI:
-    case OP_ALIGN_ALT:
-    case OP_LCTRL:
-    case OP_SCTRL:
-    case OP_PUSH_R:
-    case OP_PUSH_C:
-    case OP_PUSH:
-    case OP_PUSH_S:
-    case OP_STACK:
-    case OP_HEAP:
-    case OP_JREL:
-    case OP_SHL_C_PRI:
-    case OP_SHL_C_ALT:
-    case OP_SHR_C_PRI:
-    case OP_SHR_C_ALT:
-    case OP_ADD_C:
-    case OP_SMUL_C:
-    case OP_ZERO:
-    case OP_ZERO_S:
-    case OP_EQ_C_PRI:
-    case OP_EQ_C_ALT:
-    case OP_INC:
-    case OP_INC_S:
-    case OP_DEC:
-    case OP_DEC_S:
-    case OP_MOVS:
-    case OP_CMPS:
-    case OP_FILL:
-    case OP_HALT:
-    case OP_BOUNDS:
-    case OP_PUSH_ADR:
-      cip+=sizeof(cell);
-      break;
-
-    case OP_LOAD_I:     /* instructions without parameters */
-    case OP_STOR_I:
-    case OP_LIDX:
-    case OP_IDXADDR:
-    case OP_MOVE_PRI:
-    case OP_MOVE_ALT:
-    case OP_XCHG:
-    case OP_PUSH_PRI:
-    case OP_PUSH_ALT:
-    case OP_POP_PRI:
-    case OP_POP_ALT:
-    case OP_PROC:
-    case OP_RET:
-    case OP_RETN:
-    case OP_CALL_PRI:
-    case OP_SHL:
-    case OP_SHR:
-    case OP_SSHR:
-    case OP_SMUL:
-    case OP_SDIV:
-    case OP_SDIV_ALT:
-    case OP_UMUL:
-    case OP_UDIV:
-    case OP_UDIV_ALT:
-    case OP_ADD:
-    case OP_SUB:
-    case OP_SUB_ALT:
-    case OP_AND:
-    case OP_OR:
-    case OP_XOR:
-    case OP_NOT:
-    case OP_NEG:
-    case OP_INVERT:
-    case OP_ZERO_PRI:
-    case OP_ZERO_ALT:
-    case OP_SIGN_PRI:
-    case OP_SIGN_ALT:
-    case OP_EQ:
-    case OP_NEQ:
-    case OP_LESS:
-    case OP_LEQ:
-    case OP_GRTR:
-    case OP_GEQ:
-    case OP_SLESS:
-    case OP_SLEQ:
-    case OP_SGRTR:
-    case OP_SGEQ:
-    case OP_INC_PRI:
-    case OP_INC_ALT:
-    case OP_INC_I:
-    case OP_DEC_PRI:
-    case OP_DEC_ALT:
-    case OP_DEC_I:
-    case OP_SYSREQ_PRI:
-    case OP_JUMP_PRI:
-    case OP_SWAP_PRI:
-    case OP_SWAP_ALT:
-    case OP_NOP:
-    case OP_BREAK:
-      break;
-
-    case OP_CALL:       /* opcodes that need relocation */
-    case OP_JUMP:
-    case OP_JZER:
-    case OP_JNZ:
-    case OP_JEQ:
-    case OP_JNEQ:
-    case OP_JLESS:
-    case OP_JLEQ:
-    case OP_JGRTR:
-    case OP_JGEQ:
-    case OP_JSLESS:
-    case OP_JSLEQ:
-    case OP_JSGRTR:
-    case OP_JSGEQ:
-    case OP_SWITCH:
-      #if defined JIT
-        reloc_count++;
-      #endif
-      RELOC_ABS(code, cip);
-      cip+=sizeof(cell);
-      break;
-
-    case OP_SYSREQ_C:
-      cip+=sizeof(cell);
-      sysreq_flg|=0x01; /* mark SYSREQ.C found */
-      break;
-#if !defined AMX_NO_MACRO_INSTR
-    case OP_SYSREQ_N:
-      cip+=sizeof(cell)*2;
-      sysreq_flg|=0x02; /* mark SYSREQ.N found */
-      break;
-#endif
-
-    case OP_FILE:
-    case OP_SYMBOL: {
-      cell num;
-      DBGPARAM(num);
-      cip+=num;
-      break;
-    } /* case */
-    case OP_LINE:
-    case OP_SRANGE:
-      cip+=2*sizeof(cell);
-      break;
-    case OP_SYMTAG:
-      cip+=sizeof(cell);
-      break;
-    case OP_CASETBL: {
-      cell num;
-      int i;
-      DBGPARAM(num);    /* number of records follows the opcode */
-      for (i=0; i<=num; i++) {
-        RELOC_ABS(code, cip+2*i*sizeof(cell));
-        #if defined JIT
-          reloc_count++;
-        #endif
-      } /* for */
-      cip+=(2*num + 1)*sizeof(cell);
-      break;
-    } /* case */
-    default:
-      amx->flags &= ~AMX_FLAG_BROWSE;
-      return AMX_ERR_INVINSTR;
-    } /* switch */
-  } /* for */
-
-  assert(sysreq_flg==0 || sysreq_flg==0x01 || sysreq_flg==0x02);
-  #if !defined AMX_DONT_RELOCATE
-    if (sysreq_flg==0x01 || sysreq_flg==0x02) {
-      /* only either type of system request opcode should be found (otherwise,
-       * we probably have a non-conforming compiler
-       */
-      #if (defined __GNUC__ || defined __ICC || defined ASM32 || defined JIT) && !defined __64BIT__
-        /* to use direct system requests, a function pointer must fit in a cell;
-         * because the native function's address will be stored as the parameter
-         * of SYSREQ.D
-         */
-        if ((amx->flags & AMX_FLAG_JITC)==0 && sizeof(AMX_NATIVE)<=sizeof(cell))
-          amx->sysreq_d=(sysreq_flg==0x01) ? opcode_list[OP_SYSREQ_D] : opcode_list[OP_SYSREQ_ND];
-      #else
-        /* ANSI C
-         * to use direct system requests, a function pointer must fit in a cell;
-         * see the comment above
-         */
-        if (sizeof(AMX_NATIVE)<=sizeof(cell))
-          amx->sysreq_d=(sysreq_flg==0x01) ? OP_SYSREQ_D : OP_SYSREQ_ND;
-      #endif
-    } /* if */
-  #endif
-
-  #if defined JIT
-    amx->code_size = getMaxCodeSize()*opcode_count + hdr->cod
-                     + (hdr->stp - hdr->dat);
-    amx->reloc_size = 2*sizeof(cell)*reloc_count;
-  #endif
-
-  amx->flags &= ~AMX_FLAG_BROWSE;
-  amx->flags |= AMX_FLAG_RELOC;
-  if (sysreq_flg & 0x02)
-    amx->flags |= AMX_FLAG_SYSREQN;
-  return AMX_ERR_NONE;
-}
 
 #if AMX_COMPACTMARGIN > 2
 static void expand(unsigned char *code, long codesize, long memsize)
@@ -844,7 +525,7 @@ int AMXAPI amx_Init(AMX *amx,void *program)
   #endif
 
   /* relocate call and jump instructions */
-  if ((err=amx_BrowseRelocate(amx))!=AMX_ERR_NONE)
+  if ((err=VerifyRelocateBytecode(amx))!=AMX_ERR_NONE)
     return err;
 
   /* load any extension modules that the AMX refers to */
@@ -1008,7 +689,11 @@ int AMXAPI amx_InitJIT(AMX *amx,void *compiled_program,void *reloc_table)
 int AMXAPI amx_Cleanup(AMX *amx)
 {
   #if (defined _Windows || defined LINUX || defined __FreeBSD__ || defined __OpenBSD__) && !defined AMX_NODYNALOAD
-    typedef int AMXEXPORT (FAR *AMX_ENTRY)(AMX FAR *amx);
+    #if defined _Windows
+      typedef int (FAR WINAPI *AMX_ENTRY)(AMX FAR *amx);
+    #else
+      typedef int (*AMX_ENTRY)(AMX *amx);
+    #endif
     AMX_HEADER *hdr;
     int numlibraries,i;
     AMX_FUNCSTUB *lib;
