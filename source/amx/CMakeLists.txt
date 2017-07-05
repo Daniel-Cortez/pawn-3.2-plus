@@ -8,7 +8,6 @@ set(SHARED_INCLUDE_PATHS "")
 
 option(PAWN_USE_64BIT_CELLS "Use 64-bit cells (default: 32)" OFF)
 include("${CMAKE_CURRENT_SOURCE_DIR}/SharedCompileFlags.cmake")
-add_definitions(${SHARED_COMPILE_FLAGS})
 
 option(PAWN_NO_RUNTIME_CHECKS "Disable runtime checks" OFF)
 if(PAWN_NO_RUNTIME_CHECKS)
@@ -49,6 +48,10 @@ if(CMAKE_C_COMPILER_ID MATCHES "Clang")
   set(PAWNAMX_COMPILE_FLAGS "${PAWNAMX_COMPILE_FLAGS} -w")
 endif()
 
+if(MINGW)
+  set(PAWNAMX_COMPILE_FLAGS "${PAWNAMX_COMPILE_FLAGS} -std=gnu90")
+endif()
+
 # Set shared include paths
 set(SHARED_INCLUDE_PATHS "${SHARED_INCLUDE_PATHS}" "${CMAKE_CURRENT_SOURCE_DIR}")
 
@@ -58,7 +61,7 @@ if(UNIX)
 endif()
 
 if(WIN32)
-  add_definitions(-DAMXEXPORT=__stdcall -DAMX_NATIVE_CALL=__stdcall -DSTDECL)
+  set(SHARED_COMPILE_FLAGS "${SHARED_COMPILE_FLAGS} -DAMXEXPORT=__stdcall -DAMX_NATIVE_CALL=__stdcall -DSTDECL")
   if(NOT BORLAND)
     link_libraries(winmm)
   endif()
@@ -66,6 +69,8 @@ endif()
 
 include_directories("${SHARED_INCLUDE_PATHS}")
 add_definitions(-DFLOATPOINT -DFIXEDPOINT)
+
+add_definitions(${SHARED_COMPILE_FLAGS})
 
 # --------------------------------------------------------------------------
 # AMX static library
@@ -94,25 +99,23 @@ if(UNIX AND NOT APPLE AND PAWN_AMX_EXTS_SHARED)
   target_link_libraries(pawnamx dl)
   target_link_libraries(amxDGram ws2_32)
 endif()
-set_target_properties(pawnamx PROPERTIES
-  COMPILE_FLAGS "${PAWNAMX_COMPILE_FLAGS} ${SHARED_COMPILE_FLAGS}"
-)
-if(MINGW)
-  set_target_properties(pawnamx PROPERTIES COMPILE_FLAGS "-std=gnu90")
-endif()
+set_property(TARGET pawnamx APPEND_STRING
+  PROPERTY COMPILE_FLAGS "${PAWNAMX_COMPILE_FLAGS} ${SHARED_COMPILE_FLAGS}")
 
 # Export shared definitions
-set_target_properties(pawnamx PROPERTIES "SHARED_COMPILE_FLAGS" "${SHARED_COMPILE_FLAGS}")
-set_target_properties(pawnamx PROPERTIES "SHARED_INCLUDE_PATHS" "${SHARED_INCLUDE_PATHS}")
+set_property(TARGET pawnamx APPEND_STRING
+  PROPERTY "SHARED_COMPILE_FLAGS" "${SHARED_COMPILE_FLAGS}")
+set_property(TARGET pawnamx APPEND_STRING
+  PROPERTY "SHARED_INCLUDE_PATHS" "${SHARED_INCLUDE_PATHS}")
 
 
 # --------------------------------------------------------------------------
 # Extension modules
 set(AMX_STATIC_EXTS_LIST "")
 
-function(ADD_AMX_EXT_MODULE NAME ENABLED SOURCES)
+function(add_amx_ext_module NAME ENABLED SOURCES)
   string(TOUPPER ${NAME} UPPERCASE_NAME)
-  if(NAME STREQUAL "Core" OR NAME STREQUAL "Console")
+  if(${NAME} STREQUAL "Core" OR ${NAME} STREQUAL "Console")
     # Modules Core and Console are neither shared nor optional
     set(MODULE_SHARED OFF)
     set(PAWN_AMX_EXT_${UPPERCASE_NAME} ON)
@@ -125,7 +128,7 @@ function(ADD_AMX_EXT_MODULE NAME ENABLED SOURCES)
     set(SOURCES ${SOURCES} "amx.h")
     set(MODULE_SHARED ${PAWN_AMX_EXTS_SHARED})
     if(MODULE_SHARED)
-      if(NAME STREQUAL "Core" OR NAME STREQUAL "Console")
+      if(${NAME} STREQUAL "Core" OR ${NAME} STREQUAL "Console")
         set(MODULE_SHARED OFF)
       endif()
     endif()
@@ -149,10 +152,11 @@ function(ADD_AMX_EXT_MODULE NAME ENABLED SOURCES)
         elseif(MSVC)
           # For Microsoft Visual C/C++ we can set explicit flags for exports
           set(EXPORT_FLAGS "/export:amx_${NAME}Init /export:amx_${NAME}Cleanup")
-          if(NAME STREQUAL "Args")
+          if(${NAME} STREQUAL "Args")
             set(EXPORT_FLAGS "${EXPORT_FLAGS} /export:amx_ArgsSetCmdLine")
           endif()
-          set_target_properties(amx${NAME} PROPERTIES LINK_FLAGS "${EXPORT_FLAGS}")
+          set_property(TARGET amx${NAME} APPEND_STRING
+            PROPERTY LINK_FLAGS "${EXPORT_FLAGS}")
         endif()
       endif() # WIN32
     else() # MODULE_SHARED
@@ -160,12 +164,12 @@ function(ADD_AMX_EXT_MODULE NAME ENABLED SOURCES)
       target_link_libraries(amx${NAME} pawnamx)
       set(AMX_STATIC_EXTS_LIST "${AMX_STATIC_EXTS_LIST}" "amx${NAME}" PARENT_SCOPE)
     endif() # MODULE_SHARED
-    set_target_properties(amx${NAME} PROPERTIES PREFIX "")
     if(WIN32)
-      if(NAME STREQUAL "DGram")
+      if(${NAME} STREQUAL "DGram")
         target_link_libraries(amx${NAME} wsock32)
       endif()
     endif()
+    set_property(TARGET amx${NAME} PROPERTY PREFIX "")
   endif() # PAWN_AMX_EXT_${UPPERCASE_NAME}
 endfunction()
 
@@ -180,28 +184,30 @@ add_amx_ext_module("Process" OFF "amxprocess.c")
 
 option(PAWN_AMX_EXT_CONSOLE_IDLE "Enable @keypressed() callback in AMX extension module Console" ON)
 if(NOT PAWN_AMX_EXT_CONSOLE_IDLE)
-  set_target_properties(amxConsole PROPERTIES COMPILE_FLAGS "-DAMXCONSOLE_NOIDLE")
+  set_property(TARGET amxConsole APPEND_STRING PROPERTY COMPILE_FLAGS " -DAMXCONSOLE_NOIDLE")
 endif()
 option(PAWN_AMX_EXT_TIME_IDLE "Enable @timer() callback in AMX extension module Time" ON)
-if(NOT PAWN_AMX_EXT_TIME_IDLE)
-  set_target_properties(amxTime PROPERTIES COMPILE_FLAGS "-DAMXTIME_NOIDLE")
+if(PAWN_AMX_EXT_TIME)
+  if(NOT PAWN_AMX_EXT_TIME_IDLE)
+    set_property(TARGET amxTime APPEND_STRING PROPERTY COMPILE_FLAGS " -DAMXTIME_NOIDLE")
+  endif()
 endif()
 
 target_link_libraries(pawnamx "${AMX_STATIC_EXTS_LIST}")
 
 
+option(PAWN_BUILD_PAWNRUN "Build the example run-time program and the debugger" ON)
+if(PAWN_BUILD_PAWNRUN)
 # --------------------------------------------------------------------------
 # Simple run-time (example program)
-
-set(PAWNRUN_SRCS "pawnrun.c")
-add_executable(pawnrun ${PAWNRUN_SRCS})
-set_target_properties(pawnrun PROPERTIES COMPILE_FLAGS -DAMXDBG)
-target_link_libraries(pawnrun pawnamx)
-
+  set(PAWNRUN_SRCS "pawnrun.c")
+  add_executable(pawnrun ${PAWNRUN_SRCS})
+  set_property(TARGET pawnrun APPEND_STRING PROPERTY COMPILE_FLAGS "-DAMXDBG")
+  target_link_libraries(pawnrun pawnamx)
 
 # --------------------------------------------------------------------------
 # Simple console debugger
-
-set(PAWNDBG_SRCS "pawndbg.c")
-add_executable(pawndbg ${PAWNDBG_SRCS})
-target_link_libraries(pawndbg pawnamx)
+  set(PAWNDBG_SRCS "pawndbg.c")
+  add_executable(pawndbg ${PAWNDBG_SRCS})
+  target_link_libraries(pawndbg pawnamx)
+endif()

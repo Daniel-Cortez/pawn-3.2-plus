@@ -70,18 +70,16 @@ static unsigned long gettimestamp(void)
   unsigned long value;
 
   #if defined __WIN32__ || defined _WIN32 || defined WIN32
-    value=timeGetTime();        /* this value is already in milliseconds */
+    value = (unsigned long)timeGetTime(); /* this value is already in milliseconds */
   #else
-    value=clock();
-    #if CLOCKS_PER_SEC<1000
-      /* convert to milliseconds */
-      value=(cell)((1000L * value) / CLOCKS_PER_SEC);
-    #elif CLOCKS_PER_SEC>1000
-      /* convert to milliseconds */
-      value=(cell)(value/(CLOCKS_PER_SEC/1000));
-    #endif
+    value = (unsigned long)clock();
+    /* convert to milliseconds */
+    if (((unsigned long))CLOCKS_PER_SEC<1000UL)
+      value = (1000UL*value) / (unsigned long)CLOCKS_PER_SEC;
+    else if ((unsigned long)CLOCKS_PER_SEC>1000UL)
+      value = value / ((unsigned long)CLOCKS_PER_SEC / 1000UL);
   #endif
-  return value;
+  return (unsigned long)(cell)value;
 }
 
 void stamp2datetime(unsigned long sec1970,
