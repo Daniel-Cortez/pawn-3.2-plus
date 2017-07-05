@@ -224,11 +224,7 @@ int AMXAPI amx_Flags(AMX *amx,uint16_t *flags)
 #if defined AMX_DEFCALLBACK
 int AMXAPI amx_Callback(AMX *amx, cell index, cell *result, const cell *params)
 {
-#if defined AMX_NATIVETABLE
-  extern AMX_NATIVE const AMX_NATIVETABLE[];
-#endif
   AMX_HEADER *hdr;
-  AMX_FUNCSTUB *func;
   AMX_NATIVE f;
 
   assert(amx!=NULL);
@@ -236,18 +232,8 @@ int AMXAPI amx_Callback(AMX *amx, cell index, cell *result, const cell *params)
   assert(hdr!=NULL);
   assert(hdr->magic==AMX_MAGIC);
   assert(hdr->natives<=hdr->libraries);
-#if defined AMX_NATIVETABLE
-  if (index<0) {
-    /* size of AMX_NATIVETABLE is unknown here, so we cannot verify index */
-    f=(AMX_NATIVETABLE)[-(index+1)];
-  } else {
-#endif
-    assert(index>=0 && index<(cell)NUMNATIVES(hdr));
-    func=GETENTRY(hdr,natives,index);
-    f=(AMX_NATIVE)func->address;
-#if defined AMX_NATIVETABLE
-  } /* if */
-#endif
+  assert(index>=0 && index<(cell)NUMNATIVES(hdr));
+  f=(AMX_NATIVE)amx->natives[(size_t)index];
   assert(f!=NULL);
 
   /* Now that we have found the function, patch the program so that any
@@ -362,12 +348,13 @@ int AMXAPI amx_Init(AMX *amx,void *program)
   AMX_HEADER *hdr;
   int err,i;
   unsigned char *data;
+  int numnatives;
   #if (defined _Windows || defined LINUX || defined __FreeBSD__ || defined __OpenBSD__) && !defined AMX_NODYNALOAD
     #if defined _Windows
       char libname[sNAMEMAX+8]; /* +1 for '\0', +3 for 'amx' prefix, +4 for extension */
       typedef int (FAR WINAPI *AMX_ENTRY)(AMX _FAR *amx);
       HINSTANCE hlib;
-    #elif defined LINUX || defined __FreeBSD__ || defined __OpenBSD__
+    #else
       char libname[_MAX_PATH];
       char *root;
       typedef int (*AMX_ENTRY)(AMX *amx);
@@ -445,6 +432,17 @@ int AMXAPI amx_Init(AMX *amx,void *program)
 
   amx->base=(unsigned char *)program;
 
+  amx->libraries=NULL;
+  amx->natives = NULL;
+  numnatives=(int)NUMNATIVES(hdr);
+  if (numnatives!=0) {
+    amx->natives=(void **)malloc(sizeof(void *)*(size_t)numnatives);
+    if (amx->natives==NULL)
+      return AMX_ERR_MEMORY;
+    for (i=0; i<numnatives; ++i)
+      amx->natives[(size_t)i]=NULL;
+  }
+
   /* set initial values */
   amx->hlw=hdr->hea - hdr->dat; /* stack and heap relative to data segment */
   amx->stp=hdr->stp - hdr->dat - sizeof(cell);
@@ -479,7 +477,7 @@ int AMXAPI amx_Init(AMX *amx,void *program)
     int num;
 
     fs=GETENTRY(hdr,natives,0);
-    num=NUMNATIVES(hdr);
+    num=numnatives;
     for (i=0; i<num; i++) {
       amx_AlignCell(&fs->address);      /* redundant, because it should be zero */
       if (USENAMETABLE(hdr))
@@ -534,7 +532,10 @@ int AMXAPI amx_Init(AMX *amx,void *program)
       root=getenv("AMXLIB");
     #endif
     hdr=(AMX_HEADER *)amx->base;
-    numlibraries=NUMLIBRARIES(hdr);
+    numlibraries=(int)NUMLIBRARIES(hdr);
+    amx->libraries=(void **)malloc(sizeof(void *)*(size_t)numlibraries);
+    if (amx->libraries==NULL)
+      return AMX_ERR_MEMORY;
     for (i=0; i<numlibraries; i++) {
       lib=GETENTRY(hdr,libraries,i);
       libname[0]='\0';
@@ -576,7 +577,7 @@ int AMXAPI amx_Init(AMX *amx,void *program)
         if (libinit!=NULL)
           libinit(amx);
       } /* if */
-      lib->address=(ucell)hlib;
+      amx->libraries[i]=(void *)hlib;
     } /* for */
   #endif
 
@@ -707,28 +708,28 @@ int AMXAPI amx_Cleanup(AMX *amx)
     numlibraries=NUMLIBRARIES(hdr);
     for (i=0; i<numlibraries; i++) {
       lib=GETENTRY(hdr,libraries,i);
-      if (lib->address!=0) {
+      if (amx->libraries[i]!=0) {
         char funcname[sNAMEMAX+12]; /* +1 for '\0', +4 for 'amx_', +7 for 'Cleanup' */
         strcpy(funcname,"amx_");
         strcat(funcname,GETENTRYNAME(hdr,lib));
         strcat(funcname,"Cleanup");
         #if defined _Windows
-          libcleanup=(AMX_ENTRY)GetProcAddress((HINSTANCE)lib->address,funcname);
+          libcleanup=(AMX_ENTRY)GetProcAddress((HINSTANCE)amx->libraries[i],funcname);
         #elif defined LINUX || defined __FreeBSD__ || defined __OpenBSD__
-          libcleanup=(AMX_ENTRY)dlsym((void*)lib->address,funcname);
+          libcleanup=(AMX_ENTRY)dlsym(amx->libraries[i],funcname);
         #endif
         if (libcleanup!=NULL)
           libcleanup(amx);
         #if defined _Windows
-          FreeLibrary((HINSTANCE)lib->address);
+          FreeLibrary((HINSTANCE)amx->libraries[i]);
         #elif defined LINUX || defined __FreeBSD__ || defined __OpenBSD__
-          dlclose((void*)lib->address);
+          dlclose(amx->libraries[i]);
         #endif
       } /* if */
     } /* for */
-  #else
-    (void)amx;
   #endif
+  free(amx->libraries);
+  free(amx->natives);
   return AMX_ERR_NONE;
 }
 #endif /* AMX_CLEANUP */
@@ -1138,11 +1139,11 @@ int AMXAPI amx_Register(AMX *amx, const AMX_NATIVE_INFO *list, int number)
   err=AMX_ERR_NONE;
   func=GETENTRY(hdr,natives,0);
   for (i=0; i<numnatives; i++) {
-    if (func->address==0) {
+    if (amx->natives[(size_t)i]==0) {
       /* this function is not yet located */
       funcptr=(list!=NULL) ? findfunction(GETENTRYNAME(hdr,func),list,number) : NULL;
       if (funcptr!=NULL)
-        func->address=(ucell)funcptr;
+        amx->natives[(size_t)i]=(void *)funcptr;
       else
         err=AMX_ERR_NOTFOUND;
     } /* if */

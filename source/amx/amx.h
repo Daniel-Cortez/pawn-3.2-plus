@@ -276,6 +276,8 @@ typedef struct tagAMX {
     int reloc_size      PACKED; /* required temporary buffer for relocations */
     long code_size      PACKED; /* estimated memory footprint of the native code */
   #endif
+  void **libraries      PACKED; /* physical addresses of AMX extension modules */
+  void **natives        PACKED; /* physical addresses of native functions */
 } AMX;
 
 /* The AMX_HEADER structure is both the memory format as the file format. The
