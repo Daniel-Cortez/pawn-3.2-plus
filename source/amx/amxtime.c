@@ -73,7 +73,7 @@ static unsigned long gettimestamp(void)
   #else
     value = (unsigned long)clock();
     /* convert to milliseconds */
-    if (((unsigned long))CLOCKS_PER_SEC<1000UL)
+    if ((unsigned long)CLOCKS_PER_SEC<1000UL)
       value = (1000UL*value) / (unsigned long)CLOCKS_PER_SEC;
     else if ((unsigned long)CLOCKS_PER_SEC>1000UL)
       value = value / ((unsigned long)CLOCKS_PER_SEC / 1000UL);
