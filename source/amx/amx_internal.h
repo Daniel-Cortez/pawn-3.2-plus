@@ -1,6 +1,8 @@
 /*  Pawn Abstract Machine (for the Pawn language)
  *  Declarations and definitions for internal use in the Abstract Machine.
  *
+ *  Portions copyright (c) Stanislav Gromov, 2016-2017
+ *
  *  This code was derived from code carrying the following copyright notice:
  *
  *  Copyright (c) ITB CompuPhase, 1997-2008
@@ -290,24 +292,25 @@ typedef enum {
 #if defined AMX_DONT_RELOCATE
   #define JUMPABS(base,ip)      ((cell *)((base) + *(ip)))
   #define RELOC_ABS(base,off)   ((void)(base),(void)(off))
-  #define RELOC_VALUE(base,v)   ((void)(base),(void)(v))
+  #define RELOC_VALUE(base,v)   ((void)(base),(cell)(v))
 #else
-  #define JUMPABS(base,ip)      ((cell *)*(ip))
+  #define JUMPABS(base,ip)      ((cell *)*((void)(base),(ip)))
   #define RELOC_ABS(base,off) \
     (*(ucell *)PTR_TO_CELLPTR((size_t)(base)+(size_t)(off))+=(ucell)PTR_TO_MEMSIZE(base))
-  #define RELOC_VALUE(base,v)   ((v)+((ucell)(base)))
+  #define RELOC_VALUE(base,v)   (cell)((ucell)(v)+(ucell)(base))
 #endif
 
-#define DBGPARAM(v)     ( (v)=*(cell *)(code+(int)cip), cip+=sizeof(cell) )
+#define STKMARGIN       ((cell)(16*sizeof(cell)))
 
-#ifndef AMX_DONT_RELOCATE
-  #if (defined __GNUC__ && !defined __STRICT_ANSI__) || \
-      defined __ICC || defined ASM32 || defined JIT
-    #define AMX_EXEC_USE_JUMP_TABLE
-  #endif
+#define AMX_EXEC_USE_JUMP_TABLE
+#if (defined __GNUC__ && !defined __STRICT_ANSI__ || defined __ICC || defined __clang__) && \
+    !(defined ASM32 || defined JIT)
+  #define AMX_EXEC_USE_JUMP_TABLE_GCC
+#else
+  #undef AMX_EXEC_USE_JUMP_TABLE
 #endif
 
-#ifndef __has_builtin
+#ifndef __clang__
   #define __has_builtin(x)      0
 #endif
 
@@ -322,48 +325,39 @@ typedef enum {
   #define AMX_UNLIKELY(x)       (x)
 #endif
 
-#ifndef NDEBUG
-  #define AMX_UNREACHABLE()     assert(0)
-#elif defined __clang__ && __has_builtin(__builtin_unreachable) || \
-    defined __GNUC__ && !defined __clang__ && (__GNUC__>4 || __GNUC__==4 && __GNUC_MINOR__>=5)
-  #define AMX_UNREACHABLE()     __builtin_unreachable()
-#elif defined _MSC_VER && (defined _M_IX86 || defined _M_X64 || defined _M_ARM)
-  #define AMX_UNREACHABLE()     __assume(0)
-#else
-  #define AMX_UNREACHABLE()
-#endif
-
+#define AMX_USE_REGISTER_VARIABLES (1)
 #if defined __GNUC__
-  #define AMX_USE_REGISTER_VARIABLES (1)
-#else
-  #define AMX_USE_REGISTER_VARIABLES (0)
-#endif
-#if AMX_USE_REGISTER_VARIABLES
   #define AMX_REGISTER_VAR register
 #else
+  #undef AMX_USE_REGISTER_VARIABLES
   #define AMX_REGISTER_VAR
 #endif
 
-#define IS_INVALID_CODE_OFFS(offs,codesize) \
-                        AMX_UNLIKELY( \
-                          ((ucell)(offs)>=(codesize)) || \
+#define IS_INVALID_CODE_OFFS_NORELOC(offs,codesize)                             \
+                        AMX_UNLIKELY(                                           \
+                          ((ucell)(offs)>=(codesize)) ||                        \
                           (((ucell)(offs)&(ucell)(sizeof(cell)-1))!=0) )
-#define IS_INVALID_DATA_OFFS(offs,datasize) \
-                        AMX_UNLIKELY( \
-                          (ucell)(offs)>=(datasize))
+#define IS_INVALID_DATA_OFFS(offs,datasize)                                     \
+                        AMX_UNLIKELY(                                           \
+                          (ucell)(offs)>=(datasize) )
+#define IS_INVALID_STACK_OFFS(offs)                                             \
+                        AMX_UNLIKELY(                                           \
+                          (frm+(cell)(offs)>=stp) ||                            \
+                          (frm+(cell)(offs)<stk) )
+#define IS_INVALID_DATA_STACK_HEAP_OFFS(offs)                                   \
+                        AMX_UNLIKELY(                                           \
+                          ((cell)(offs)>=hea) && ((cell)(offs)<stk) ||          \
+                          ((ucell)(offs)>=(ucell)stp) )
 
 #if defined AMX_DONT_RELOCATE
-  #define IS_INVALID_CODE_OFFS_RELOC(offs) \
-                        IS_INVALID_CODE_OFFS(offs)
-  #define IS_INVALID_DATA_OFFS_RELOC(offs) \
-                        IS_INVALID_DATA_OFFS(offs)
+  #define IS_INVALID_CODE_OFFS(offs,code,codesize)                              \
+                        IS_INVALID_CODE_OFFS_NORELOC(offs,codesize)
 #else
-  #define IS_INVALID_CODE_OFFS_RELOC(offs) \
-                        ((ucell)(offs)<(ucell)PTR_TO_CELL(code)) || \
-                        ((ucell)(offs)>=(ucell)PTR_TO_CELL(code+(size_t)codesize)) || \
-                        (((ucell)(offs)&(ucell)(sizeof(cell)-1))!=0) )
-  #define IS_INVALID_DATA_OFFS_RELOC(offs) \
-                        IS_INVALID_DATA_OFFS(offs)
+  #define IS_INVALID_CODE_OFFS(offs,code,codesize)                              \
+                        AMX_UNLIKELY(                                           \
+                          ((ucell)(offs)<(ucell)PTR_TO_CELL(code)) ||           \
+                          ((ucell)(offs)>=(ucell)PTR_TO_CELL(code+(size_t)codesize)) || \
+                          (((ucell)(offs)&(ucell)(sizeof(cell)-1))!=0) )
 #endif
 
 #endif /* AMX_INTERNAL_H_INCLUDED */

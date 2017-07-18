@@ -78,6 +78,7 @@ set(PAWNAMX_SRCS
   "amx.h"
   "amx_internal.h"
   "amx.c"
+  "amx_exec.c"
   "amx_verifier.c"
   "amxaux.h"
   "amxaux.c"
