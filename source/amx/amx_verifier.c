@@ -82,7 +82,7 @@ static int VHANDLER_CALL v_parm1_codeoffs(VERIFICATION_DATA *vdata)
   cell *arg_addr;
 
   arg_addr=PARAMADDR(vdata->cip, 1);
-  if (IS_INVALID_CODE_OFFS(*arg_addr, vdata->codesize)) {
+  if (IS_INVALID_CODE_OFFS_NORELOC(*arg_addr, vdata->codesize)) {
     vdata->err=AMX_ERR_BOUNDS;
     return -1;
   }
@@ -261,7 +261,7 @@ static int VHANDLER_CALL v_stack_heap(VERIFICATION_DATA *vdata)
 static int VHANDLER_CALL v_jrel(VERIFICATION_DATA *vdata)
 {
   cell arg=(cell)((size_t)(vdata->cip)-(size_t)(vdata->code))+*PARAMADDR(vdata->cip, 1);
-  if (IS_INVALID_CODE_OFFS(arg, vdata->codesize)) {
+  if (IS_INVALID_CODE_OFFS_NORELOC(arg, vdata->codesize)) {
     vdata->err=AMX_ERR_BOUNDS;
     return -1;
   }
@@ -318,7 +318,7 @@ static int VHANDLER_CALL v_switch(VERIFICATION_DATA *vdata)
   const cell *arg_addr=PARAMADDR(cip, 1);
   cell arg=*arg_addr;
 
-  if (IS_INVALID_CODE_OFFS(arg, vdata->codesize)) {
+  if (IS_INVALID_CODE_OFFS_NORELOC(arg, vdata->codesize)) {
     vdata->err=AMX_ERR_BOUNDS;
     return -1;
   }
@@ -349,7 +349,7 @@ static int VHANDLER_CALL v_casetbl(VERIFICATION_DATA *vdata)
   for (i=2; i<=num_args; i+=2) {
     arg_addr=PARAMADDR(cip, i);
     arg=*arg_addr;
-    if (IS_INVALID_CODE_OFFS(arg, codesize)) {
+    if (IS_INVALID_CODE_OFFS_NORELOC(arg, codesize)) {
       vdata->err=AMX_ERR_BOUNDS;
       return -1;
     }
@@ -535,7 +535,7 @@ static const VHANDLER handlers[256] = {
 #undef vhnd_dup10
 };
 
-#ifdef AMX_EXEC_USE_JUMP_TABLE
+#if defined AMX_EXEC_USE_JUMP_TABLE && !defined AMX_DONT_RELOCATE
 static size_t *amx_exec_jump_table = NULL;
 #endif
 
@@ -551,15 +551,11 @@ int VerifyRelocateBytecode(AMX *amx)
   AMX_REGISTER_VAR int num_args;
 
   amx->flags |= AMX_FLAG_BROWSE;
-#ifdef AMX_EXEC_USE_JUMP_TABLE
+#if defined AMX_EXEC_USE_JUMP_TABLE && !defined AMX_DONT_RELOCATE
   if (NULL == amx_exec_jump_table) {
-  #ifndef AMX_DONT_RELOCATE
     amx_Exec(amx, (cell*)(void*)&amx_exec_jump_table, 0);
-  #else
-    amx_Exec(amx, NULL, 0);
-  #endif /* AMX_DONT_RELOCATE */
   }
-#endif /* AMX_EXEC_USE_JUMP_TABLE */
+#endif
 
   // Make sure there's 256 handlers total.
   assert_static(1<<(sizeof(char)*8)==sizeof(handlers)/sizeof(handlers[0]));
@@ -594,8 +590,7 @@ int VerifyRelocateBytecode(AMX *amx)
     /* Replace the operation code by a jump address
      * to the instruction handling code in amx_Exec.
      */
-    op=*CELLADDR(vdata.cip, 0);
-    *CELLADDR(vdata.code, vdata.cip)=*PTR_TO_CELLPTR(&amx_exec_jump_table[op]);
+    *(vdata.cip)=*PTR_TO_CELLPTR(&amx_exec_jump_table[op]);
 #endif
     vdata.cip+=(size_t)(1+num_args);
   }
@@ -604,14 +599,14 @@ int VerifyRelocateBytecode(AMX *amx)
   case 0x0:
     break;
   case 0x1:
-  #ifdef AMX_EXEC_USE_JUMP_TABLE
+  #if defined AMX_EXEC_USE_JUMP_TABLE && !defined AMX_DONT_RELOCATE
     amx->sysreq_d=*PTR_TO_CELLPTR(&amx_exec_jump_table[(size_t)OP_SYSREQ_D]);
   #else
     amx->sysreq_d=OP_SYSREQ_D;
   #endif
     break;
   case 0x2:
-  #ifdef AMX_EXEC_USE_JUMP_TABLE
+  #if defined AMX_EXEC_USE_JUMP_TABLE && !defined AMX_DONT_RELOCATE
     amx->sysreq_d=*PTR_TO_CELLPTR(&amx_exec_jump_table[(size_t)OP_SYSREQ_ND]);
   #else
     amx->sysreq_d=OP_SYSREQ_ND;
@@ -627,4 +622,4 @@ int VerifyRelocateBytecode(AMX *amx)
   return AMX_ERR_NONE;
 }
 
-#endif // AMX_INIT
+#endif /* AMX_INIT */
