@@ -149,6 +149,17 @@
   #define AMXEXEC_COLD_CODE()   (void)0
 #endif
 
+#ifndef NDEBUG
+  #define AMXEXEC_UNREACHABLE() assert(0)
+#elif defined __clang__ && __has_builtin(__builtin_unreachable) || \
+      defined __GNUC__ && !defined __clang__ && (__GNUC__>4 || __GNUC__==4 && __GNUC_MINOR__>=5)
+  #define AMXEXEC_UNREACHABLE() __builtin_unreachable()
+#elif defined _MSC_VER && (defined _M_IX86 || defined _M_X64 || defined _M_ARM)
+  #define AMXEXEC_UNREACHABLE() __assume(0)
+#else
+  #define AMXEXEC_UNREACHABLE() (void)0
+#endif
+
 #if defined AMX_EXEC_USE_JUMP_TABLE_GCC
   #if defined AMX_DONT_RELOCATE
     #define OPHND_NEXT_()       do { goto *handlers[(size_t)(unsigned char)*cip++]; } while (0)
@@ -415,7 +426,7 @@ int AMXAPI amx_Exec(AMX *amx, cell *retval, int index)
     OPHND_CASE(OP_LOAD_S_PRI):
       offs=GETPARAM(1);
       if (IS_INVALID_STACK_OFFS(offs))
-       ERR_MEMACCESS();
+        ERR_MEMACCESS();
       pri=_R(data,frm+offs);
     OPHND_NEXT(1);
 
@@ -481,6 +492,8 @@ int AMXAPI amx_Exec(AMX *amx, cell *retval, int index)
       case 4:
         pri=(cell)_R32(data,pri);
         break;
+      default:
+        AMXEXEC_UNREACHABLE();
       } /* switch */
     OPHND_NEXT(1);
 
@@ -579,6 +592,8 @@ int AMXAPI amx_Exec(AMX *amx, cell *retval, int index)
       case 4:
         _W32(data,alt,pri);
         break;
+      default:
+        AMXEXEC_UNREACHABLE();
       } /* switch */
     OPHND_NEXT(1);
 
@@ -643,6 +658,8 @@ int AMXAPI amx_Exec(AMX *amx, cell *retval, int index)
       case 6:
         pri=(cell)((size_t)cip - (size_t)code);
         break;
+      default:
+        AMXEXEC_UNREACHABLE();
       } /* switch */
     OPHND_NEXT(1);
 
@@ -674,6 +691,8 @@ int AMXAPI amx_Exec(AMX *amx, cell *retval, int index)
             ERR_MEMACCESS();
           JUMP_NORELOC(pri);
           break;
+        default:
+          AMXEXEC_UNREACHABLE();
         } /* switch */
     OPHND_NEXT(1);
 
@@ -768,7 +787,7 @@ int AMXAPI amx_Exec(AMX *amx, cell *retval, int index)
       offs=*(cptr+1);
       /* verify the return address */
       if (IS_INVALID_CODE_OFFS_NORELOC(offs,codesize))
-          ERR_MEMACCESS();
+        ERR_MEMACCESS();
       stk+=_R(data,stk)+(cell)sizeof(cell); /* remove parameters from the stack */
       CHKSTACK();
       JUMP_NORELOC(offs);
@@ -1447,167 +1466,151 @@ int AMXAPI amx_Exec(AMX *amx, cell *retval, int index)
 
     OPHND_CASE(OP_PUSH5_C):
       ALLOCSTACK(5);
-      cptr2=cip;
-      *(--cptr)=*(cptr2++);
-      *(--cptr)=*(cptr2++);
-      *(--cptr)=*(cptr2++);
-      *(--cptr)=*(cptr2++);
-      *(--cptr)=*(cptr2++);
+      *(cptr-1)=GETPARAM(1);
+      *(cptr-2)=GETPARAM(2);
+      *(cptr-3)=GETPARAM(3);
+      *(cptr-4)=GETPARAM(4);
+      *(cptr-5)=GETPARAM(5);
     OPHND_NEXT(5);
 
     OPHND_CASE(OP_PUSH4_C):
       ALLOCSTACK(4);
-      cptr2=cip;
-      *(--cptr)=*(cptr2++);
-      *(--cptr)=*(cptr2++);
-      *(--cptr)=*(cptr2++);
-      *(--cptr)=*(cptr2++);
+      *(cptr-1)=GETPARAM(1);
+      *(cptr-2)=GETPARAM(2);
+      *(cptr-3)=GETPARAM(3);
+      *(cptr-4)=GETPARAM(4);
     OPHND_NEXT(4);
 
     OPHND_CASE(OP_PUSH3_C):
       ALLOCSTACK(3);
-      cptr2=cip;
-      *(--cptr)=*(cptr2++);
-      *(--cptr)=*(cptr2++);
-      *(--cptr)=*(cptr2++);
+      *(cptr-1)=GETPARAM(1);
+      *(cptr-2)=GETPARAM(2);
+      *(cptr-3)=GETPARAM(3);
     OPHND_NEXT(3);
 
     OPHND_CASE(OP_PUSH2_C):
       ALLOCSTACK(2);
-      cptr2=cip;
-      *(--cptr)=*(cptr2++);
-      *(--cptr)=*(cptr2++);
+      *(cptr-1)=GETPARAM(1);
+      *(cptr-2)=GETPARAM(2);
     OPHND_NEXT(2);
 
     OPHND_CASE(OP_PUSH5):
       /* the addresses are already verified in VerifyRelocateBytecode */
       ALLOCSTACK(5);
-      cptr2=cip;
-      *(--cptr)=_R(data,*(cptr2++));
-      *(--cptr)=_R(data,*(cptr2++));
-      *(--cptr)=_R(data,*(cptr2++));
-      *(--cptr)=_R(data,*(cptr2++));
-      *(--cptr)=_R(data,*(cptr2++));
+      *(cptr-1)=_R(data,GETPARAM(1));
+      *(cptr-2)=_R(data,GETPARAM(2));
+      *(cptr-3)=_R(data,GETPARAM(3));
+      *(cptr-4)=_R(data,GETPARAM(4));
+      *(cptr-5)=_R(data,GETPARAM(5));
     OPHND_NEXT(5);
 
     OPHND_CASE(OP_PUSH4):
       ALLOCSTACK(4);
-      cptr2=cip;
-      *(--cptr)=_R(data,*(cptr2++));
-      *(--cptr)=_R(data,*(cptr2++));
-      *(--cptr)=_R(data,*(cptr2++));
-      *(--cptr)=_R(data,*(cptr2++));
+      *(cptr-1)=_R(data,GETPARAM(1));
+      *(cptr-2)=_R(data,GETPARAM(2));
+      *(cptr-3)=_R(data,GETPARAM(3));
+      *(cptr-4)=_R(data,GETPARAM(4));
     OPHND_NEXT(4);
 
     OPHND_CASE(OP_PUSH3):
       ALLOCSTACK(3);
-      cptr2=cip;
-      *(--cptr)=_R(data,*(cptr2++));
-      *(--cptr)=_R(data,*(cptr2++));
-      *(--cptr)=_R(data,*(cptr2++));
+      *(cptr-1)=_R(data,GETPARAM(1));
+      *(cptr-2)=_R(data,GETPARAM(2));
+      *(cptr-3)=_R(data,GETPARAM(3));
     OPHND_NEXT(3);
 
     OPHND_CASE(OP_PUSH2):
       ALLOCSTACK(2);
-      cptr2=cip;
-      *(--cptr)=_R(data,*(cptr2++));
-      *(--cptr)=_R(data,*(cptr2++));
+      *(cptr-1)=_R(data,GETPARAM(1));
+      *(cptr-2)=_R(data,GETPARAM(2));
     OPHND_NEXT(2);
 
     OPHND_CASE(OP_PUSH5_S):
       ALLOCSTACK(5);
-      cptr2=cip;
-      if (((offs=*(cptr2++)),IS_INVALID_STACK_OFFS(offs)))
+      if (((offs=GETPARAM(1)),IS_INVALID_STACK_OFFS(offs)))
         ERR_MEMACCESS();
-      *(--cptr)=_R(data,frm+offs);
-      if (((offs=*(cptr2++)),IS_INVALID_STACK_OFFS(offs)))
+      *(cptr-1)=_R(data,frm+offs);
+      if (((offs=GETPARAM(2)),IS_INVALID_STACK_OFFS(offs)))
         ERR_MEMACCESS();
-      *(--cptr)=_R(data,frm+offs);
-      if (((offs=*(cptr2++)),IS_INVALID_STACK_OFFS(offs)))
+      *(cptr-2)=_R(data,frm+offs);
+      if (((offs=GETPARAM(3)),IS_INVALID_STACK_OFFS(offs)))
         ERR_MEMACCESS();
-      *(--cptr)=_R(data,frm+offs);
-      if (((offs=*(cptr2++)),IS_INVALID_STACK_OFFS(offs)))
+      *(cptr-3)=_R(data,frm+offs);
+      if (((offs=GETPARAM(4)),IS_INVALID_STACK_OFFS(offs)))
         ERR_MEMACCESS();
-      *(--cptr)=_R(data,frm+offs);
-      if (((offs=*(cptr2++)),IS_INVALID_STACK_OFFS(offs)))
+      *(cptr-4)=_R(data,frm+offs);
+      if (((offs=GETPARAM(5)),IS_INVALID_STACK_OFFS(offs)))
         ERR_MEMACCESS();
-      *(--cptr)=_R(data,frm+offs);
+      *(cptr-5)=_R(data,frm+offs);
     OPHND_NEXT(5);
 
     OPHND_CASE(OP_PUSH4_S):
       ALLOCSTACK(4);
-      cptr2=cip;
-      if (((offs=*(cptr2++)),IS_INVALID_STACK_OFFS(offs)))
+      if (((offs=GETPARAM(1)),IS_INVALID_STACK_OFFS(offs)))
         ERR_MEMACCESS();
-      *(--cptr)=_R(data,frm+offs);
-      if (((offs=*(cptr2++)),IS_INVALID_STACK_OFFS(offs)))
+      *(cptr-1)=_R(data,frm+offs);
+      if (((offs=GETPARAM(2)),IS_INVALID_STACK_OFFS(offs)))
         ERR_MEMACCESS();
-      *(--cptr)=_R(data,frm+offs);
-      if (((offs=*(cptr2++)),IS_INVALID_STACK_OFFS(offs)))
+      *(cptr-2)=_R(data,frm+offs);
+      if (((offs=GETPARAM(3)),IS_INVALID_STACK_OFFS(offs)))
         ERR_MEMACCESS();
-      *(--cptr)=_R(data,frm+offs);
-      if (((offs=*(cptr2++)),IS_INVALID_STACK_OFFS(offs)))
+      *(cptr-3)=_R(data,frm+offs);
+      if (((offs=GETPARAM(4)),IS_INVALID_STACK_OFFS(offs)))
         ERR_MEMACCESS();
-      *(--cptr)=_R(data,frm+offs);
+      *(cptr-4)=_R(data,frm+offs);
     OPHND_NEXT(4);
 
     OPHND_CASE(OP_PUSH3_S):
       ALLOCSTACK(3);
-      cptr2=cip;
-      if (((offs=*(cptr2++)),IS_INVALID_STACK_OFFS(offs)))
+      if (((offs=GETPARAM(1)),IS_INVALID_STACK_OFFS(offs)))
         ERR_MEMACCESS();
-      *(--cptr)=_R(data,frm+offs);
-      if (((offs=*(cptr2++)),IS_INVALID_STACK_OFFS(offs)))
+      *(cptr-1)=_R(data,frm+offs);
+      if (((offs=GETPARAM(2)),IS_INVALID_STACK_OFFS(offs)))
         ERR_MEMACCESS();
-      *(--cptr)=_R(data,frm+offs);
-      if (((offs=*(cptr2++)),IS_INVALID_STACK_OFFS(offs)))
+      *(cptr-2)=_R(data,frm+offs);
+      if (((offs=GETPARAM(3)),IS_INVALID_STACK_OFFS(offs)))
         ERR_MEMACCESS();
-      *(--cptr)=_R(data,frm+offs);
+      *(cptr-3)=_R(data,frm+offs);
     OPHND_NEXT(3);
 
     OPHND_CASE(OP_PUSH2_S):
       ALLOCSTACK(2);
-      cptr2=cip;
-      if (((offs=*(cptr2++)),IS_INVALID_STACK_OFFS(offs)))
+      if (((offs=GETPARAM(1)),IS_INVALID_STACK_OFFS(offs)))
         ERR_MEMACCESS();
-      *(--cptr)=_R(data,frm+offs);
-      if (((offs=*(cptr2++)),IS_INVALID_STACK_OFFS(offs)))
+      *(cptr-1)=_R(data,frm+offs);
+      if (((offs=GETPARAM(2)),IS_INVALID_STACK_OFFS(offs)))
         ERR_MEMACCESS();
-      *(--cptr)=_R(data,frm+offs);
+      *(cptr-2)=_R(data,frm+offs);
     OPHND_NEXT(2);
 
     OPHND_CASE(OP_PUSH5_ADR):
       ALLOCSTACK(5);
-      cptr2=cip;
-      *(--cptr)=frm+(*(cptr2++));
-      *(--cptr)=frm+(*(cptr2++));
-      *(--cptr)=frm+(*(cptr2++));
-      *(--cptr)=frm+(*(cptr2++));
-      *(--cptr)=frm+(*(cptr2++));
+      *(cptr-1)=frm+GETPARAM(1);
+      *(cptr-2)=frm+GETPARAM(2);
+      *(cptr-3)=frm+GETPARAM(3);
+      *(cptr-4)=frm+GETPARAM(4);
+      *(cptr-5)=frm+GETPARAM(5);
     OPHND_NEXT(5);
 
     OPHND_CASE(OP_PUSH4_ADR):
       ALLOCSTACK(4);
-      cptr2=cip;
-      *(--cptr)=frm+(*(cptr2++));
-      *(--cptr)=frm+(*(cptr2++));
-      *(--cptr)=frm+(*(cptr2++));
-      *(--cptr)=frm+(*(cptr2++));
+      *(cptr-1)=frm+GETPARAM(1);
+      *(cptr-2)=frm+GETPARAM(2);
+      *(cptr-3)=frm+GETPARAM(3);
+      *(cptr-4)=frm+GETPARAM(4);
     OPHND_NEXT(4);
 
     OPHND_CASE(OP_PUSH3_ADR):
       ALLOCSTACK(3);
-      cptr2=cip;
-      *(--cptr)=frm+(*(cptr2++));
-      *(--cptr)=frm+(*(cptr2++));
-      *(--cptr)=frm+(*(cptr2++));
+      *(cptr-1)=frm+GETPARAM(1);
+      *(cptr-2)=frm+GETPARAM(2);
+      *(cptr-3)=frm+GETPARAM(3);
     OPHND_NEXT(3);
 
     OPHND_CASE(OP_PUSH2_ADR):
       ALLOCSTACK(2);
-      cptr2=cip;
-      *(--cptr)=frm+(*(cptr2++));
-      *(--cptr)=frm+(*(cptr2++));
+      *(cptr-1)=frm+GETPARAM(1);
+      *(cptr-2)=frm+GETPARAM(2);
     OPHND_NEXT(2);
 
     OPHND_CASE(OP_LOAD_BOTH):
@@ -1661,7 +1664,7 @@ int AMXAPI amx_Exec(AMX *amx, cell *retval, int index)
     OPHND_CASE(OP_SYSREQ_ND):
     #if defined AMX_DONT_RELOCATE
       assert(0); /* this code should not occur if relocation is disabled */
-    ERR_INVINSTR();
+      ERR_INVINSTR();
     #else
       val=GETPARAM(2);
       PUSH(val);
