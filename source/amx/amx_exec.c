@@ -162,7 +162,7 @@
 
 #if defined AMX_EXEC_USE_JUMP_TABLE_GCC
   #if defined AMX_DONT_RELOCATE
-    #define OPHND_NEXT_()       do { goto *handlers[(size_t)(unsigned char)*cip++]; } while (0)
+    #define OPHND_NEXT_()       do { goto *handlers[(size_t)(unsigned char)_RCODE()]; } while (0)
   #else
     #define OPHND_NEXT_()       do { goto **cip++; } while (0)
   #endif
