@@ -142,7 +142,6 @@ function(add_amx_ext_module NAME ENABLED SOURCES)
         endif()
       endif() # WIN32
       add_library(amx${NAME} SHARED ${SOURCES})
-      target_link_libraries(amx${NAME} pawnamx)
       if(WIN32)
         if(BORLAND)
           # Borland linker uses a DEF file if one is in the output directory
@@ -162,9 +161,9 @@ function(add_amx_ext_module NAME ENABLED SOURCES)
       endif() # WIN32
     else() # MODULE_SHARED
       add_library(amx${NAME} STATIC ${SOURCES})
-      target_link_libraries(amx${NAME} pawnamx)
       set(AMX_STATIC_EXTS_LIST "${AMX_STATIC_EXTS_LIST}" "amx${NAME}" PARENT_SCOPE)
     endif() # MODULE_SHARED
+    target_link_libraries(amx${NAME} pawnamx)
     if(WIN32)
       if(${NAME} STREQUAL "DGram")
         target_link_libraries(amx${NAME} wsock32)
@@ -194,8 +193,6 @@ if(PAWN_AMX_EXT_TIME)
   endif()
 endif()
 
-target_link_libraries(pawnamx "${AMX_STATIC_EXTS_LIST}")
-
 
 option(PAWN_BUILD_PAWNRUN "Build the example run-time program and the debugger" ON)
 if(PAWN_BUILD_PAWNRUN)
@@ -204,11 +201,11 @@ if(PAWN_BUILD_PAWNRUN)
   set(PAWNRUN_SRCS "pawnrun.c")
   add_executable(pawnrun ${PAWNRUN_SRCS})
   set_property(TARGET pawnrun APPEND_STRING PROPERTY COMPILE_FLAGS "-DAMXDBG")
-  target_link_libraries(pawnrun pawnamx)
+  target_link_libraries(pawnrun pawnamx ${AMX_STATIC_EXTS_LIST})
 
 # --------------------------------------------------------------------------
 # Simple console debugger
   set(PAWNDBG_SRCS "pawndbg.c")
   add_executable(pawndbg ${PAWNDBG_SRCS})
-  target_link_libraries(pawndbg pawnamx)
+  target_link_libraries(pawndbg pawnamx ${AMX_STATIC_EXTS_LIST})
 endif()

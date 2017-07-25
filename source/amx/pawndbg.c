@@ -425,10 +425,18 @@ static void term_open(int columns,int lines)
     amx_printf("\033)0");                  /* select graphics codes for set G1 */
   #endif
   #if defined WIN32_CONSOLE
-    #define ENABLE_INSERT_MODE      0x0020
-    #define ENABLE_QUICK_EDIT_MODE  0x0040
-    #define ENABLE_EXTENDED_FLAGS   0x0080
-    #define ENABLE_AUTO_POSITION    0x0100
+    #if !defined ENABLE_INSERT_MODE
+      #define ENABLE_INSERT_MODE        0x0020
+    #endif
+    #if !defined ENABLE_QUICK_EDIT_MODE
+      #define ENABLE_QUICK_EDIT_MODE    0x0040
+    #endif
+    #if !defined ENABLE_EXTENDED_FLAGS
+      #define ENABLE_EXTENDED_FLAGS     0x0080
+    #endif
+    #if !defined ENABLE_AUTO_POSITION
+      #define ENABLE_AUTO_POSITION      0x0100
+    #endif
     win32_getscreensize(&screencolumns,&screenlines);
     screenlines--;      /* keep last line empty */
     SetConsoleMode(GetStdHandle(STD_OUTPUT_HANDLE),

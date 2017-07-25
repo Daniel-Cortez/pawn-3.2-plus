@@ -224,6 +224,9 @@ int AMXAPI amx_Flags(AMX *amx,uint16_t *flags)
 #if defined AMX_DEFCALLBACK
 int AMXAPI amx_Callback(AMX *amx, cell index, cell *result, const cell *params)
 {
+#if defined AMX_NATIVETABLE
+  extern AMX_NATIVE const AMX_NATIVETABLE[];
+#endif
   AMX_HEADER *hdr;
   AMX_NATIVE f;
 #if !( (!defined AMX_PTR_SIZE) || (AMX_PTR_SIZE*8>PAWN_CELL_SIZE) )
@@ -235,13 +238,22 @@ int AMXAPI amx_Callback(AMX *amx, cell index, cell *result, const cell *params)
   assert(hdr!=NULL);
   assert(hdr->magic==AMX_MAGIC);
   assert(hdr->natives<=hdr->libraries);
-  assert(index>=0 && index<(cell)NUMNATIVES(hdr));
-  #if (!defined AMX_PTR_SIZE) || (AMX_PTR_SIZE*8>PAWN_CELL_SIZE)
-    f=(AMX_NATIVE)amx->natives[(size_t)index];
-  #else
-    func=GETENTRY(hdr,natives,index);
-    f=(AMX_NATIVE)func->address;
-  #endif
+#if defined AMX_NATIVETABLE
+  if (index<0) {
+    /* size of AMX_NATIVETABLE is unknown here, so we cannot verify index */
+    f=(AMX_NATIVETABLE)[-(index+1)];
+  } else {
+#endif
+    assert(index>=0 && index<(cell)NUMNATIVES(hdr));
+    #if (!defined AMX_PTR_SIZE) || (AMX_PTR_SIZE*8>PAWN_CELL_SIZE)
+      f=(AMX_NATIVE)amx->natives[(size_t)index];
+    #else
+      func=GETENTRY(hdr,natives,index);
+      f=(AMX_NATIVE)func->address;
+    #endif
+#if defined AMX_NATIVETABLE
+  } /* if */
+#endif
   assert(f!=NULL);
 
   /* Now that we have found the function, patch the program so that any

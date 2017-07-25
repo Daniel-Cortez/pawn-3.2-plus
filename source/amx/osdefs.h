@@ -35,6 +35,10 @@
 #    define __WIN32__   1
 #    define __32BIT__   1
 #  endif
+#elif defined(__MINGW32__)
+#  if !defined(_Windows)
+#    define _Windows    1
+#  endif
 #endif
 
 #if (!defined __FreeBSD__) && (defined FREEBSD)
