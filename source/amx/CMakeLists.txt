@@ -157,6 +157,9 @@ function(add_amx_ext_module NAME ENABLED SOURCES)
           endif()
           set_property(TARGET amx${NAME} APPEND_STRING
             PROPERTY LINK_FLAGS "${EXPORT_FLAGS}")
+        elseif(MINGW)
+          set_property(TARGET amx${NAME} APPEND_STRING
+            PROPERTY LINK_FLAGS "-Wl,-k")
         endif()
       endif() # WIN32
     else() # MODULE_SHARED
