@@ -9,9 +9,10 @@ set(SHARED_INCLUDE_PATHS "")
 option(PAWN_USE_64BIT_CELLS "Use 64-bit cells (default: 32)" OFF)
 include("${CMAKE_CURRENT_SOURCE_DIR}/SharedCompileFlags.cmake")
 
-option(PAWN_NO_RUNTIME_CHECKS "Disable runtime checks" OFF)
-if(PAWN_NO_RUNTIME_CHECKS)
-  set(PAWNAMX_COMPILE_FLAGS "${PAWNAMX_COMPILE_FLAGS} -DAMX_NO_RUNTIME_CHECKS")
+# Allow the user to choose between the new interpreter core and the old ones.
+option(PAWN_USE_NEW_AMXEXEC "Use the new interpreter core (amx_Exec)" ON)
+if(PAWN_USE_NEW_AMXEXEC)
+  set(PAWNAMX_COMPILE_FLAGS "${PAWNAMX_COMPILE_FLAGS} -DAMX_USE_NEW_AMXEXEC")
 endif()
 
 # Add an option to build AMX extensions as dynamic libraries (*.dll, *.so etc.)
