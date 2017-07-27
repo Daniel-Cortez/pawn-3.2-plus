@@ -23,6 +23,8 @@
  *  3.  This notice may not be removed or altered from any source distribution.
  */
 
+#if defined AMX_USE_NEW_AMXEXEC
+
 #include "amx.h"
 #include "amx_internal.h"
 
@@ -1716,4 +1718,6 @@ abort_exec:
 #endif /* defined ASM32 || defined JIT */
 }
 
-#endif /* AMX_EXEC || AMX_INIT */
+#endif /* defined AMX_EXEC || defined AMX_INIT */
+
+#endif /* defined AMX_USE_NEW_AMXEXEC */
