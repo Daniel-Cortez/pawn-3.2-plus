@@ -145,6 +145,18 @@
   #define JUMP(offs)    cip=(cell *)(void *)((size_t)offs)
 #endif
 
+#if defined AMX_DONT_RELOCATE && defined _R_DEFAULT
+  #define _R_DATA_RELOC(data,offs) \
+                        _R(data,offs)
+  #define _W_DATA_RELOC(data,offs,value) \
+                        _W(data,offs,value)
+#else
+  #define _R_DATA_RELOC(data,offs) \
+                        ((void)data,*(cell *)(size_t)(offs))
+  #define _W_DATA_RELOC(data,offs,value) \
+                        ((void)data,(*(cell *)(size_t)(offs))=(value))
+#endif
+
 #if defined __GNUC__
   #define AMXEXEC_COLD_CODE()   __attribute__((cold, unused))
 #else
@@ -417,12 +429,12 @@ int AMXAPI amx_Exec(AMX *amx, cell *retval, int index)
 
     OPHND_CASE(OP_LOAD_PRI):
       /* the address is already verified in VerifyRelocateBytecode */
-      pri=_R(data,GETPARAM(1));
+      pri=_R_DATA_RELOC(data,GETPARAM(1));
     OPHND_NEXT(1);
 
     OPHND_CASE(OP_LOAD_ALT):
       /* the address is already verified in VerifyRelocateBytecode */
-      alt=_R(data,GETPARAM(1));
+      alt=_R_DATA_RELOC(data,GETPARAM(1));
     OPHND_NEXT(1);
 
     OPHND_CASE(OP_LOAD_S_PRI):
@@ -441,7 +453,7 @@ int AMXAPI amx_Exec(AMX *amx, cell *retval, int index)
 
     OPHND_CASE(OP_LREF_PRI):
       /* the address is already verified in VerifyRelocateBytecode */
-      offs=_R(data,GETPARAM(1));
+      offs=_R_DATA_RELOC(data,GETPARAM(1));
       if (IS_INVALID_DATA_OFFS(offs,datasize))
         ERR_MEMACCESS();
       pri=_R(data,offs);
@@ -449,7 +461,7 @@ int AMXAPI amx_Exec(AMX *amx, cell *retval, int index)
 
     OPHND_CASE(OP_LREF_ALT):
       /* the address is already verified in VerifyRelocateBytecode */
-      offs=_R(data,GETPARAM(1));
+      offs=_R_DATA_RELOC(data,GETPARAM(1));
       if (IS_INVALID_DATA_OFFS(offs,datasize))
         ERR_MEMACCESS();
       alt=_R(data,offs);
@@ -517,12 +529,12 @@ int AMXAPI amx_Exec(AMX *amx, cell *retval, int index)
 
     OPHND_CASE(OP_STOR_PRI):
       /* the address is already verified in VerifyRelocateBytecode */
-      _W(data,GETPARAM(1),pri);
+      _W_DATA_RELOC(data,GETPARAM(1),pri);
     OPHND_NEXT(1);
 
     OPHND_CASE(OP_STOR_ALT):
       /* the address is already verified in VerifyRelocateBytecode */
-      _W(data,GETPARAM(1),alt);
+      _W_DATA_RELOC(data,GETPARAM(1),alt);
     OPHND_NEXT(1);
 
     OPHND_CASE(OP_STOR_S_PRI):
@@ -541,7 +553,7 @@ int AMXAPI amx_Exec(AMX *amx, cell *retval, int index)
 
     OPHND_CASE(OP_SREF_PRI):
       /* the address is already verified in VerifyRelocateBytecode */
-      offs=_R(data,GETPARAM(1));
+      offs=_R_DATA_RELOC(data,GETPARAM(1));
       if (IS_INVALID_DATA_OFFS(offs,datasize))
         ERR_MEMACCESS();
       _W(data,offs,pri);
@@ -549,7 +561,7 @@ int AMXAPI amx_Exec(AMX *amx, cell *retval, int index)
 
     OPHND_CASE(OP_SREF_ALT):
       /* the address is already verified in VerifyRelocateBytecode */
-      offs=_R(data,GETPARAM(1));
+      offs=_R_DATA_RELOC(data,GETPARAM(1));
       if (IS_INVALID_DATA_OFFS(offs,datasize))
         ERR_MEMACCESS();
       _W(data,offs,alt);
@@ -735,7 +747,7 @@ int AMXAPI amx_Exec(AMX *amx, cell *retval, int index)
     OPHND_CASE(OP_PUSH):
       offs=GETPARAM(1);
       /* the address is already verified in VerifyRelocateBytecode */
-      PUSH(_R(data,offs));
+      PUSH(_R_DATA_RELOC(data,offs));
     OPHND_NEXT(1);
 
     OPHND_CASE(OP_PUSH_S):
@@ -1064,7 +1076,7 @@ int AMXAPI amx_Exec(AMX *amx, cell *retval, int index)
 
     OPHND_CASE(OP_ZERO):
       /* the address is already verified in VerifyRelocateBytecode */
-      _W(data,GETPARAM(1),0);
+      _W_DATA_RELOC(data,GETPARAM(1),0);
     OPHND_NEXT(1);
 
     OPHND_CASE(OP_ZERO_S):
@@ -1143,7 +1155,11 @@ int AMXAPI amx_Exec(AMX *amx, cell *retval, int index)
     OPHND_CASE(OP_INC):
       /* the address is already verified in VerifyRelocateBytecode */
       #if defined _R_DEFAULT
-        *(cell *)(void *)(data+(size_t)GETPARAM(1)) += 1;
+        #if defined AMX_DONT_RELOCATE
+          *(cell *)(void *)(data+(size_t)GETPARAM(1)) += 1;
+        #else
+          *(cell *)(size_t)GETPARAM(1) += 1;
+        #endif
       #else
         offs=GETPARAM(1);
         val=_R(data,offs);
@@ -1185,7 +1201,11 @@ int AMXAPI amx_Exec(AMX *amx, cell *retval, int index)
     OPHND_CASE(OP_DEC):
       /* the address is already verified in VerifyRelocateBytecode */
       #if defined _R_DEFAULT
-        *(cell *)(void *)(data+(size_t)GETPARAM(1)) -= 1;
+        #if defined AMX_DONT_RELOCATE
+          *(cell *)(void *)(data+(size_t)GETPARAM(1)) -= 1;
+        #else
+          *(cell *)(size_t)GETPARAM(1) -= 1;
+        #endif
       #else
         offs=GETPARAM(1);
         val=_R(data,offs);
@@ -1498,32 +1518,32 @@ int AMXAPI amx_Exec(AMX *amx, cell *retval, int index)
     OPHND_CASE(OP_PUSH5):
       /* the addresses are already verified in VerifyRelocateBytecode */
       ALLOCSTACK(5);
-      *(cptr-1)=_R(data,GETPARAM(1));
-      *(cptr-2)=_R(data,GETPARAM(2));
-      *(cptr-3)=_R(data,GETPARAM(3));
-      *(cptr-4)=_R(data,GETPARAM(4));
-      *(cptr-5)=_R(data,GETPARAM(5));
+      *(cptr-1)=_R_DATA_RELOC(data,GETPARAM(1));
+      *(cptr-2)=_R_DATA_RELOC(data,GETPARAM(2));
+      *(cptr-3)=_R_DATA_RELOC(data,GETPARAM(3));
+      *(cptr-4)=_R_DATA_RELOC(data,GETPARAM(4));
+      *(cptr-5)=_R_DATA_RELOC(data,GETPARAM(5));
     OPHND_NEXT(5);
 
     OPHND_CASE(OP_PUSH4):
       ALLOCSTACK(4);
-      *(cptr-1)=_R(data,GETPARAM(1));
-      *(cptr-2)=_R(data,GETPARAM(2));
-      *(cptr-3)=_R(data,GETPARAM(3));
-      *(cptr-4)=_R(data,GETPARAM(4));
+      *(cptr-1)=_R_DATA_RELOC(data,GETPARAM(1));
+      *(cptr-2)=_R_DATA_RELOC(data,GETPARAM(2));
+      *(cptr-3)=_R_DATA_RELOC(data,GETPARAM(3));
+      *(cptr-4)=_R_DATA_RELOC(data,GETPARAM(4));
     OPHND_NEXT(4);
 
     OPHND_CASE(OP_PUSH3):
       ALLOCSTACK(3);
-      *(cptr-1)=_R(data,GETPARAM(1));
-      *(cptr-2)=_R(data,GETPARAM(2));
-      *(cptr-3)=_R(data,GETPARAM(3));
+      *(cptr-1)=_R_DATA_RELOC(data,GETPARAM(1));
+      *(cptr-2)=_R_DATA_RELOC(data,GETPARAM(2));
+      *(cptr-3)=_R_DATA_RELOC(data,GETPARAM(3));
     OPHND_NEXT(3);
 
     OPHND_CASE(OP_PUSH2):
       ALLOCSTACK(2);
-      *(cptr-1)=_R(data,GETPARAM(1));
-      *(cptr-2)=_R(data,GETPARAM(2));
+      *(cptr-1)=_R_DATA_RELOC(data,GETPARAM(1));
+      *(cptr-2)=_R_DATA_RELOC(data,GETPARAM(2));
     OPHND_NEXT(2);
 
     OPHND_CASE(OP_PUSH5_S):
@@ -1616,8 +1636,8 @@ int AMXAPI amx_Exec(AMX *amx, cell *retval, int index)
 
     OPHND_CASE(OP_LOAD_BOTH):
       /* the addresses are already verified in VerifyRelocateBytecode */
-      pri=_R(data,GETPARAM(1));
-      alt=_R(data,GETPARAM(2));
+      pri=_R_DATA_RELOC(data,GETPARAM(1));
+      alt=_R_DATA_RELOC(data,GETPARAM(2));
     OPHND_NEXT(2);
 
     OPHND_CASE(OP_LOAD_S_BOTH):
@@ -1633,7 +1653,7 @@ int AMXAPI amx_Exec(AMX *amx, cell *retval, int index)
 
     OPHND_CASE(OP_CONST):
       /* the address is already verified in VerifyRelocateBytecode */
-      _W(data,GETPARAM(1),GETPARAM(2));
+      _W_DATA_RELOC(data,GETPARAM(1),GETPARAM(2));
     OPHND_NEXT(2);
 
     OPHND_CASE(OP_CONST_S):

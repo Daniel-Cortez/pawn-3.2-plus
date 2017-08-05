@@ -37,6 +37,17 @@ int VerifyRelocateBytecode(AMX *amx);
 #define PARAMADDR(ip,n)                 PTR_TO_CELLPTR((size_t)(ip)+(size_t)(n)*sizeof(cell))
 #define GETOFFS(base,ptr)               (PTR_TO_MEMSIZE(ptr)-PTR_TO_MEMSIZE(base))
 
+#if !defined AMX_DONT_RELOCATE
+  #define RELOC_CODE_OFFS(code,argaddr) ((*(ucell *)argaddr)+=(ucell)PTR_TO_MEMSIZE(code))
+#else
+  #define RELOC_CODE_OFFS(code,argaddr) ((void)(code),(void)(arg_addr))
+#endif
+#if !defined AMX_DONT_RELOCATE && !defined _R && defined AMX_USE_NEW_AMXEXEC
+  #define RELOC_DATA_OFFS(data,argaddr) ((*(ucell *)argaddr)+=(ucell)PTR_TO_MEMSIZE(data))
+#else
+  #define RELOC_DATA_OFFS(data,argaddr) ((void)(data),(void)(argaddr))
+#endif
+
 
 #if defined _MSC_VER
   #define VHANDLER_CALL __fastcall
@@ -59,6 +70,7 @@ int VerifyRelocateBytecode(AMX *amx);
 typedef struct tagVERIFICATION_DATA {
   cell *cip;
   unsigned char *code;
+  unsigned char *data;
   ucell num_natives;
   ucell codesize, datasize, stacksize;
   int sysreq_flag;
@@ -78,7 +90,6 @@ static int VHANDLER_CALL v_parm1_number(VERIFICATION_DATA *vdata)
 
 static int VHANDLER_CALL v_parm1_codeoffs(VERIFICATION_DATA *vdata)
 {
-  unsigned char const *code=vdata->code;
   cell *arg_addr;
 
   arg_addr=PARAMADDR(vdata->cip, 1);
@@ -87,16 +98,21 @@ static int VHANDLER_CALL v_parm1_codeoffs(VERIFICATION_DATA *vdata)
     return -1;
   }
 
-  RELOC_ABS(code, GETOFFS(code, arg_addr));
+  RELOC_CODE_OFFS(vdata->code, arg_addr);
   return 1;
 }
 
 static int VHANDLER_CALL v_parm1_dataoffs(VERIFICATION_DATA *vdata)
 {
-  if (IS_INVALID_DATA_OFFS(*PARAMADDR(vdata->cip, 1), vdata->datasize)) {
+  cell *arg_addr;
+
+  arg_addr=PARAMADDR(vdata->cip, 1);
+  if (IS_INVALID_DATA_OFFS(*arg_addr, vdata->datasize)) {
     vdata->err=AMX_ERR_BOUNDS;
     return -1;
   }
+
+  RELOC_DATA_OFFS(vdata->data, arg_addr);
   return 1;
 }
 
@@ -108,16 +124,22 @@ static int VHANDLER_CALL v_parm2_number(VERIFICATION_DATA *vdata)
 static int VHANDLER_CALL v_parm2_dataoffs(VERIFICATION_DATA *vdata)
 {
   cell const *cip=vdata->cip;
+  unsigned char const *data=vdata->data;
   const ucell datasize=vdata->datasize;
+  cell *arg_addr;
 
-  if (IS_INVALID_DATA_OFFS(*PARAMADDR(cip, 1), datasize)) {
+  arg_addr=PARAMADDR(cip, 1);
+  if (IS_INVALID_DATA_OFFS(*arg_addr, datasize)) {
 err:
     vdata->err=AMX_ERR_BOUNDS;
     return -1;
   }
+  RELOC_DATA_OFFS(data, arg_addr);
 
-  if (IS_INVALID_DATA_OFFS(*PARAMADDR(cip, 2), datasize))
+  arg_addr=PARAMADDR(cip, 2);
+  if (IS_INVALID_DATA_OFFS(*arg_addr, datasize))
     goto err;
+  RELOC_DATA_OFFS(data, arg_addr);
 
   return 2;
 }
@@ -139,23 +161,31 @@ static int VHANDLER_CALL v_parm3_number(VERIFICATION_DATA *vdata)
 static int VHANDLER_CALL v_parm3_dataoffs(VERIFICATION_DATA *vdata)
 {
   cell const *cip=vdata->cip;
+  unsigned char const *data=vdata->data;
   const ucell datasize=vdata->datasize;
+  cell *arg_addr;
   cell arg;
 
-  arg=*PARAMADDR(cip, 1);
+  arg_addr=PARAMADDR(cip, 1);
+  arg=*arg_addr;
   if (IS_INVALID_DATA_OFFS(arg, datasize)) {
 err:
     vdata->err=AMX_ERR_BOUNDS;
     return -1;
   }
+  RELOC_DATA_OFFS(data, arg_addr);
 
-  arg=*PARAMADDR(cip, 2);
+  arg_addr=PARAMADDR(cip, 2);
+  arg=*arg_addr;
   if (IS_INVALID_DATA_OFFS(arg, datasize))
     goto err;
+  RELOC_DATA_OFFS(data, arg_addr);
 
-  arg=*PARAMADDR(cip, 3);
+  arg_addr=PARAMADDR(cip, 3);
+  arg=*arg_addr;
   if (IS_INVALID_DATA_OFFS(arg, datasize))
     goto err;
+  RELOC_DATA_OFFS(data, arg_addr);
 
   return 3;
 }
@@ -168,27 +198,37 @@ static int VHANDLER_CALL v_parm4_number(VERIFICATION_DATA *vdata)
 static int VHANDLER_CALL v_parm4_dataoffs(VERIFICATION_DATA *vdata)
 {
   cell const *cip=vdata->cip;
+  unsigned char const *data=vdata->data;
   const ucell datasize=vdata->datasize;
+  cell *arg_addr;
   cell arg;
 
-  arg=*PARAMADDR(cip, 1);
+  arg_addr=PARAMADDR(cip, 1);
+  arg=*arg_addr;
   if (IS_INVALID_DATA_OFFS(arg, datasize)) {
 err:
     vdata->err=AMX_ERR_BOUNDS;
     return -1;
   }
+  RELOC_DATA_OFFS(data, arg_addr);
 
-  arg=*PARAMADDR(cip, 2);
+  arg_addr=PARAMADDR(cip, 2);
+  arg=*arg_addr;
   if (IS_INVALID_DATA_OFFS(arg, datasize))
     goto err;
+  RELOC_DATA_OFFS(data, arg_addr);
 
-  arg=*PARAMADDR(cip, 3);
+  arg_addr=PARAMADDR(cip, 3);
+  arg=*arg_addr;
   if (IS_INVALID_DATA_OFFS(arg, datasize))
     goto err;
+  RELOC_DATA_OFFS(data, arg_addr);
 
-  arg=*PARAMADDR(cip, 4);
+  arg_addr=PARAMADDR(cip, 4);
+  arg=*arg_addr;
   if (IS_INVALID_DATA_OFFS(arg, datasize))
     goto err;
+  RELOC_DATA_OFFS(data, arg_addr);
 
   return 4;
 }
@@ -201,31 +241,43 @@ static int VHANDLER_CALL v_parm5_number(VERIFICATION_DATA *vdata)
 static int VHANDLER_CALL v_parm5_dataoffs(VERIFICATION_DATA *vdata)
 {
   cell const *cip=vdata->cip;
+  unsigned char const *data=vdata->data;
   const ucell datasize=vdata->datasize;
+  cell *arg_addr;
   cell arg;
 
-  arg=*PARAMADDR(cip, 1);
+  arg_addr=PARAMADDR(cip, 1);
+  arg=*arg_addr;
   if (IS_INVALID_DATA_OFFS(arg, datasize)) {
 err:
     vdata->err=AMX_ERR_BOUNDS;
     return -1;
   }
+  RELOC_DATA_OFFS(data, arg_addr);
 
-  arg=*PARAMADDR(cip, 2);
+  arg_addr=PARAMADDR(cip, 2);
+  arg=*arg_addr;
   if (IS_INVALID_DATA_OFFS(arg, datasize))
     goto err;
+  RELOC_DATA_OFFS(data, arg_addr);
 
-  arg=*PARAMADDR(cip, 3);
+  arg_addr=PARAMADDR(cip, 3);
+  arg=*arg_addr;
   if (IS_INVALID_DATA_OFFS(arg, datasize))
     goto err;
+  RELOC_DATA_OFFS(data, arg_addr);
 
-  arg=*PARAMADDR(cip, 4);
+  arg_addr=PARAMADDR(cip, 4);
+  arg=*arg_addr;
   if (IS_INVALID_DATA_OFFS(arg, datasize))
     goto err;
+  RELOC_DATA_OFFS(data, arg_addr);
 
-  arg=*PARAMADDR(cip, 5);
+  arg_addr=PARAMADDR(cip, 5);
+  arg=*arg_addr;
   if (IS_INVALID_DATA_OFFS(arg, datasize))
     goto err;
+  RELOC_DATA_OFFS(data, arg_addr);
 
   return 5;
 }
@@ -238,7 +290,7 @@ static int VHANDLER_CALL v_invalid(VERIFICATION_DATA *vdata)
 
 static int VHANDLER_CALL v_lodb_i_strb_i(VERIFICATION_DATA *vdata)
 {
-  cell arg=*PARAMADDR(vdata->cip, 1);
+  const cell arg=*PARAMADDR(vdata->cip, 1);
   if (AMX_UNLIKELY(arg!=1 && arg!=2 && arg!=4)) {
     vdata->err=AMX_ERR_PARAMS;
     return -1;
@@ -260,7 +312,7 @@ static int VHANDLER_CALL v_stack_heap(VERIFICATION_DATA *vdata)
 
 static int VHANDLER_CALL v_jrel(VERIFICATION_DATA *vdata)
 {
-  cell arg=(cell)((size_t)(vdata->cip)-(size_t)(vdata->code))+*PARAMADDR(vdata->cip, 1);
+  const cell arg=(cell)((size_t)(vdata->cip)-(size_t)(vdata->code))+*PARAMADDR(vdata->cip, 1);
   if (IS_INVALID_CODE_OFFS_NORELOC(arg, vdata->codesize)) {
     vdata->err=AMX_ERR_BOUNDS;
     return -1;
@@ -273,7 +325,7 @@ static int VHANDLER_CALL v_sysreq(VERIFICATION_DATA *vdata)
   /* verify the native function ID and replace it by another one
    * from the global native table if relocation is possible
    */
-  cell *cip=vdata->cip;
+  cell const *cip=vdata->cip;
   cell arg;
 
   arg=*PARAMADDR(cip, 1);
@@ -313,10 +365,10 @@ static int VHANDLER_CALL v_sysreq(VERIFICATION_DATA *vdata)
 
 static int VHANDLER_CALL v_switch(VERIFICATION_DATA *vdata)
 {
-  unsigned char *code=vdata->code;
+  unsigned char const *code=vdata->code;
   const cell *cip=vdata->cip;
   const cell *arg_addr=PARAMADDR(cip, 1);
-  cell arg=*arg_addr;
+  const cell arg=*arg_addr;
 
   if (IS_INVALID_CODE_OFFS_NORELOC(arg, vdata->codesize)) {
     vdata->err=AMX_ERR_BOUNDS;
@@ -327,7 +379,7 @@ static int VHANDLER_CALL v_switch(VERIFICATION_DATA *vdata)
     return -1;
   }
 
-  RELOC_ABS(code, GETOFFS(code, arg_addr));
+  RELOC_CODE_OFFS(code, arg_addr);
 
   return 1;
 }
@@ -336,7 +388,7 @@ static int VHANDLER_CALL v_casetbl(VERIFICATION_DATA *vdata)
 {
   AMX_REGISTER_VAR ucell i, num_args;
   cell const *cip=vdata->cip;
-  ucell codesize=vdata->codesize;
+  const ucell codesize=vdata->codesize;
   unsigned char const *code=vdata->code;
   cell *arg_addr;
   cell arg;
@@ -353,7 +405,7 @@ static int VHANDLER_CALL v_casetbl(VERIFICATION_DATA *vdata)
       vdata->err=AMX_ERR_BOUNDS;
       return -1;
     }
-    RELOC_ABS(code, GETOFFS(code, arg_addr));
+    RELOC_CODE_OFFS(code, arg_addr);
   }
 
   return num_args;
@@ -565,6 +617,7 @@ int VerifyRelocateBytecode(AMX *amx)
   vdata.datasize=(ucell)(hdr->hea-hdr->dat);
   vdata.stacksize=(ucell)(hdr->stp-hdr->hea);
   vdata.code=amx->base+(size_t)hdr->cod;
+  vdata.data=amx->base+(size_t)hdr->dat;
   vdata.cip=PTR_TO_CELLPTR(vdata.code);
   vdata.num_natives=(ucell)NUMNATIVES(hdr);
   vdata.err=AMX_ERR_NONE;
