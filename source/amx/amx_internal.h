@@ -291,12 +291,9 @@ typedef enum {
 
 #if defined AMX_DONT_RELOCATE
   #define JUMPABS(base,ip)      ((cell *)((base) + *(ip)))
-  #define RELOC_ABS(base,off)   ((void)(base),(void)(off))
   #define RELOC_VALUE(base,v)   ((void)(base),(cell)(v))
 #else
   #define JUMPABS(base,ip)      ((cell *)*((void)(base),(ip)))
-  #define RELOC_ABS(base,off) \
-    (*(ucell *)PTR_TO_CELLPTR((size_t)(base)+(size_t)(off))+=(ucell)PTR_TO_MEMSIZE(base))
   #define RELOC_VALUE(base,v)   (cell)((ucell)(v)+(ucell)(base))
 #endif
 
