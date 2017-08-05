@@ -734,8 +734,7 @@ int AMXAPI amx_Exec(AMX *amx, cell *retval, int index)
 
     OPHND_CASE(OP_PUSH):
       offs=GETPARAM(1);
-      if (IS_INVALID_DATA_OFFS(offs,datasize))
-        ERR_MEMACCESS();
+      /* the address is already verified in VerifyRelocateBytecode */
       PUSH(_R(data,offs));
     OPHND_NEXT(1);
 
