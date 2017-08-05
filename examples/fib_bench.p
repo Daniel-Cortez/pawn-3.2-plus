@@ -29,9 +29,9 @@
 
 main()
 {
-    new i, ticks;
+    static i, ticks;
+    static f1, f2, j, t;
     new a[46];
-    new f1, f2, j, t;
     ticks = tickcount();
     for (i = 0; i < NUM_ITERATIONS; ++i)
     {
