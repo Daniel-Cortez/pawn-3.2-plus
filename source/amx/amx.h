@@ -194,8 +194,10 @@ typedef int (AMXAPI *AMX_IDLE)(struct tagAMX *amx, int AMXAPI Exec(struct tagAMX
 /* Some compilers do not support the #pragma align, which should be fine. Some
  * compilers give a warning on unknown #pragmas, which is not so fine...
  */
-#if (defined SN_TARGET_PS2 || defined __GNUC__) && !defined AMX_NO_ALIGN
-  #define AMX_NO_ALIGN
+#if !defined AMX_NO_ALIGN
+  #if defined SN_TARGET_PS2 || defined __GNUC__ && !defined __clang__ && (__GNUC__ < 4 || __GNUC__ == 4 && __GNUC_MINOR__ < 7)
+    #define AMX_NO_ALIGN
+  #endif
 #endif
 
 #if defined __GNUC__
@@ -341,7 +343,7 @@ enum {
   AMX_ERR_INIT_JIT,     /* cannot initialize the JIT */
   AMX_ERR_PARAMS,       /* parameter error */
   AMX_ERR_DOMAIN,       /* domain error, expression result does not fit in range */
-  AMX_ERR_GENERAL,      /* general error (unknown or unspecific error) */
+  AMX_ERR_GENERAL       /* general error (unknown or unspecific error) */
 };
 
 /*      AMX_FLAG_CHAR16   0x01     no longer used */

@@ -63,7 +63,7 @@ if(UNIX)
 endif()
 
 if(WIN32)
-  set(SHARED_COMPILE_FLAGS "${SHARED_COMPILE_FLAGS} -DAMXEXPORT=__stdcall -DAMX_NATIVE_CALL=__stdcall -DSTDECL")
+  set(SHARED_COMPILE_FLAGS "${SHARED_COMPILE_FLAGS} -DAMX_NATIVE_CALL=__stdcall -DSTDECL")
   if(NOT BORLAND)
     link_libraries(winmm)
   endif()
