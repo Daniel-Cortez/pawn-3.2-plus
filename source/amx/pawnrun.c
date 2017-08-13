@@ -51,7 +51,9 @@
  * support for dynamic linking is enabled).
  */
 extern int AMXEXPORT AMXAPI amx_ConsoleInit(AMX *amx);
+extern int AMXEXPORT AMXAPI amx_ConsoleCleanup(AMX *amx);
 extern int AMXEXPORT AMXAPI amx_CoreInit(AMX *amx);
+extern int AMXEXPORT AMXAPI amx_CoreCleanup(AMX *amx);
 
 AMX *global_amx;
 int AMXAPI srun_Monitor(AMX *amx);
@@ -263,9 +265,11 @@ int main(int argc,char *argv[])
 
   end=clock();
 
-  /* Free the compiled script and resources. This also unloads and DLLs or
+  /* Free the compiled script and resources. This also unloads all DLLs or
    * shared libraries that were registered automatically by amx_Init().
    */
+  amx_CoreCleanup(&amx);
+  amx_ConsoleCleanup(&amx);
   aux_FreeProgram(&amx);
 
   /* Print the return code of the compiled script (often not very useful),
