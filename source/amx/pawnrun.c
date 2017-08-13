@@ -49,8 +49,8 @@
  * extension modules may be dynamically linked (depending on whether
  * support for dynamic linking is enabled).
  */
-extern int AMXEXPORT amx_ConsoleInit(AMX *amx);
-extern int AMXEXPORT amx_CoreInit(AMX *amx);
+extern int AMXEXPORT AMXAPI amx_ConsoleInit(AMX *amx);
+extern int AMXEXPORT AMXAPI amx_CoreInit(AMX *amx);
 
 AMX *global_amx;
 int AMXAPI srun_Monitor(AMX *amx);
