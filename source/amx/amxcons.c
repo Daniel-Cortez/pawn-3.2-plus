@@ -43,13 +43,23 @@
   #include <conio.h>
   #include <malloc.h>
 #endif
-#if defined USE_CURSES || defined HAVE_CURSES_H
-  #include <curses.h>
+#include "amx.h"
+#if defined USE_CURSES
+  #if defined HAVE_CURSES_H
+    #include <curses.h>
+  #elif defined HAVE_NCURSES_H
+    #include <ncurses.h>
+  #elif defined HAVE_NCURSES_NCURSES_H
+    #include <ncurses/ncurses.h>
+  #elif defined HAVE_NCURSES_CURSES_H
+    #include <ncurses/curses.h>
+  #else
+    #include <curses.h>
+  #endif
   #if !defined CURSES
     #define CURSES  1
   #endif
 #endif
-#include "amx.h"
 #if defined __WIN32__ || defined _WIN32 || defined WIN32
   #include <windows.h>
 #endif

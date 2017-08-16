@@ -62,25 +62,14 @@
 #include "amx_internal.h"
 
 #ifdef AMX_INIT
- #ifdef AMX_PTR_SIZE
-    #ifdef __cplusplus
-    extern "C" {
-    #endif /* __cplusplus */
+  #ifdef __cplusplus
+  extern "C" {
+  #endif /* __cplusplus */
     int VerifyRelocateBytecode(AMX *amx);
-    #ifdef __cplusplus
-    }
-    #endif /* __cplusplus */
-  #else
-    /* pawndisasm is compiled with amx.c, but without amx_verifier.c,
-       so we'll use a dummy function here instead.
-    */
-    static int VerifyRelocateBytecode(AMX *amx)
-    {
-      (void)amx;
-      return AMX_ERR_NONE;
-    }
-  #endif
-#endif
+  #ifdef __cplusplus
+  }
+  #endif /* __cplusplus */
+#endif /* AMX_INIT */
 
 
 #if !defined NDEBUG
@@ -266,26 +255,28 @@ int AMXAPI amx_Callback(AMX *amx, cell index, cell *result, const cell *params)
     if ((amx->flags & AMX_FLAG_JITC)!=0)
       assert(amx->sysreq_d==0);
   #endif
-  if (amx->sysreq_d!=0) {
-    /* at the point of the call, the CIP pseudo-register points directly
-     * behind the SYSREQ instruction and its parameter(s)
-     */
-    unsigned char *code=amx->base+(int)hdr->cod+(int)amx->cip-sizeof(cell);
-    assert(amx->cip >= 4 && amx->cip < (hdr->dat - hdr->cod));
-    assert_static(sizeof(f)<=sizeof(cell)); /* function pointer must fit in a cell */
-    if (amx->flags & AMX_FLAG_SYSREQN)		/* SYSREQ.N has 2 parameters */
-      code-=sizeof(cell);
+  #if !defined AMX_DONT_RELOCATE
+    if (amx->sysreq_d!=0) {
+      /* at the point of the call, the CIP pseudo-register points directly
+       * behind the SYSREQ instruction and its parameter(s)
+       */
+      unsigned char *code=amx->base+(int)hdr->cod+(int)amx->cip-sizeof(cell);
+      assert(amx->cip >= 4 && amx->cip < (hdr->dat - hdr->cod));
+      assert_static(sizeof(f)<=sizeof(cell)); /* function pointer must fit in a cell */
+      if (amx->flags & AMX_FLAG_SYSREQN)		/* SYSREQ.N has 2 parameters */
+        code-=sizeof(cell);
 #if defined AMX_EXEC_USE_JUMP_TABLE && !defined AMX_DONT_RELOCATE
-    if (*(cell*)code==index) {
+      if (*(cell*)code==index) {
 #else
-    if (*(cell*)code!=OP_SYSREQ_PRI) {
-      assert(*(cell*)(code-sizeof(cell))==OP_SYSREQ_C || *(cell*)(code-sizeof(cell))==OP_SYSREQ_N);
-      assert(*(cell*)code==index);
+      if (*(cell*)code!=OP_SYSREQ_PRI) {
+        assert(*(cell*)(code-sizeof(cell))==OP_SYSREQ_C || *(cell*)(code-sizeof(cell))==OP_SYSREQ_N);
+        assert(*(cell*)code==index);
 #endif
-      *(cell*)(code-sizeof(cell))=amx->sysreq_d;
-      *(cell*)code=(cell)f;
+        *(cell*)(code-sizeof(cell))=amx->sysreq_d;
+        *(cell*)code=(cell)f;
+      } /* if */
     } /* if */
-  } /* if */
+  #endif /* !defined AMX_DONT_RELOCATE */
 
   /* Note:
    *   params[0] == number of bytes for the additional parameters passed to the native function

@@ -28,8 +28,10 @@
 #define AMX_INTERNAL_H_INCLUDED
 
 
-#if (!defined AMX_PTR_SIZE) || (AMX_PTR_SIZE*8>PAWN_CELL_SIZE)
-  #define AMX_DONT_RELOCATE
+#if !defined AMX_DONT_RELOCATE
+  #if (!defined AMX_PTR_SIZE) || (AMX_PTR_SIZE*8>PAWN_CELL_SIZE)
+    #define AMX_DONT_RELOCATE
+  #endif
 #endif
 
 /* The macros below are supposed to inhibit compiler warnings about conversion

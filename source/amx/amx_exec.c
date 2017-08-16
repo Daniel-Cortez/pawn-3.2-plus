@@ -293,7 +293,7 @@ int AMXAPI amx_Exec(AMX *amx, cell *retval, int index)
         assert_static(sizeof(cell)==sizeof(void *));
       #endif
     #endif
-    #if defined AMX_EXEC_USE_JUMP_TABLE_GCC
+    #if defined AMX_EXEC_USE_JUMP_TABLE_GCC && !defined AMX_DONT_RELOCATE
       assert(retval!=NULL);
       *retval=(cell)handlers;
       return 0;
