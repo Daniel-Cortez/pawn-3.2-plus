@@ -127,6 +127,35 @@
     #define CHR_HLINE   '-'
   #endif
   #define CHR_VLINE     '|'
+#elif defined USE_CURSES
+  #if defined HAVE_CURSES_H
+    #include <curses.h>
+  #elif defined HAVE_NCURSES_H
+    #include <ncurses.h>
+  #elif defined HAVE_NCURSES_NCURSES_H
+    #include <ncurses/ncurses.h>
+  #elif defined HAVE_NCURSES_CURSES_H
+    #include <ncurses/curses.h>
+  #else
+    #include <curses.h>
+  #endif
+  /* Use the "curses" library to implement the console */
+  const int _False = 0;     /* to avoid compiler warnings */
+  #define amx_printf        printw
+  #define amx_putchar(c)    addch(c)
+  #define amx_fflush()      (0)
+  #define amx_getch()       getch()
+  #define amx_gets(s,n)     getnstr(s,n)
+  #define amx_clrscr()      (void)(0)
+  #define amx_clreol()      (void)(0)
+  #define amx_gotoxy(x,y)   (void)(0)
+  #define amx_wherexy(x,y)  (*(x)=*(y)=0)
+  #define amx_setattr(c,b,h) (_False)
+  #define amx_termctl(c,v)  (_False)
+  #define amx_console(c,l,f) (void)(0)
+  #define STR_PROMPT        "dbg> "
+  #define CHR_HLINE         '-'
+  #define CHR_VLINE         '|'
 #elif defined VT100 || defined LINUX || defined ANSITERM
   /* ANSI/VT100 terminal, or shell emulating "xterm" */
   #if !defined VT100 && !defined ANSITERM && defined LINUX
@@ -164,24 +193,6 @@
   #define STR_PROMPT    "dbg> "
   #define CHR_HLINE     '\xc4'
   #define CHR_VLINE     '\xb3'
-#elif defined USE_CURSES
-  /* Use the "curses" library to implement the console */
-  const int _False = 0;     /* to avoid compiler warnings */
-  #define amx_printf        printw
-  #define amx_putchar(c)    addch(c)
-  #define amx_fflush()      (0)
-  #define amx_getch()       getch()
-  #define amx_gets(s,n)     getnstr(s,n)
-  #define amx_clrscr()      (void)(0)
-  #define amx_clreol()      (void)(0)
-  #define amx_gotoxy(x,y)   (void)(0)
-  #define amx_wherexy(x,y)  (*(x)=*(y)=0)
-  #define amx_setattr(c,b,h) (_False)
-  #define amx_termctl(c,v)  (_False)
-  #define amx_console(c,l,f) (void)(0)
-  #define STR_PROMPT        "dbg> "
-  #define CHR_HLINE         '-'
-  #define CHR_VLINE         '|'
 #else
   /* assume a streaming terminal; limited features (no colour, no cursor
    * control)

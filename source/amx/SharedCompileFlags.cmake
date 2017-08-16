@@ -38,7 +38,6 @@ set(REQUIRED_INCLUDE_FILES
   "stdint.h"
   "alloca.h"
   "tchar.h"
-  "curses.h"
   "utime.h"
 )
 foreach(INCLUDE_FILE ${REQUIRED_INCLUDE_FILES})
