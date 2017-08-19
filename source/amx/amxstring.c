@@ -369,6 +369,9 @@ static cell AMX_NATIVE_CALL n_strcmp(AMX *amx,const cell *params)
   int len1,len2,len;
   cell result;
 
+  if (params[4]==0)
+    return 0;
+
   amx_GetAddr(amx,params[1],&cstr1);
   amx_GetAddr(amx,params[2],&cstr2);
 
@@ -380,12 +383,14 @@ static cell AMX_NATIVE_CALL n_strcmp(AMX *amx,const cell *params)
     len=len2;
   if (len>params[4])
     len=params[4];
-  if (len==0)
-    return 0;
 
   result=compare(cstr1,cstr2,params[3],len,0);
-  if (result==0 && len!=params[4])
-    result=len1-len2;
+  if (result==0 && len!=params[4]) {
+    if (len1>len2)
+      return 1;
+    if (len1<len2)
+      return -1;
+  }
   return result;
 }
 
