@@ -4,7 +4,7 @@ cmake_minimum_required(VERSION 2.6)
 
 # Initialize variables for compile flags
 set(PAWNAMX_COMPILE_FLAGS "")
-set(SHARED_INCLUDE_PATHS "")
+set(SHARED_INCLUDE_DIRECTORIES "")
 
 option(PAWN_USE_64BIT_CELLS "Use 64-bit cells (default: 32)" OFF)
 include("${CMAKE_CURRENT_SOURCE_DIR}/SharedCompileFlags.cmake")
@@ -55,11 +55,11 @@ if(MINGW)
 endif()
 
 # Set shared include paths
-set(SHARED_INCLUDE_PATHS "${SHARED_INCLUDE_PATHS}" "${CMAKE_CURRENT_SOURCE_DIR}")
+set(SHARED_INCLUDE_DIRECTORIES "${SHARED_INCLUDE_DIRECTORIES}" "${CMAKE_CURRENT_SOURCE_DIR}")
 
 # Include "source/linux" on Unix-like systems
 if(UNIX)
-  set(SHARED_INCLUDE_PATHS "${SHARED_INCLUDE_PATHS}" "${CMAKE_CURRENT_SOURCE_DIR}/../linux")
+  set(SHARED_INCLUDE_DIRECTORIES "${SHARED_INCLUDE_DIRECTORIES}" "${CMAKE_CURRENT_SOURCE_DIR}/../linux")
 endif()
 
 if(WIN32)
@@ -69,7 +69,7 @@ if(WIN32)
   endif()
 endif()
 
-include_directories("${SHARED_INCLUDE_PATHS}")
+include_directories("${SHARED_INCLUDE_DIRECTORIES}")
 add_definitions(-DFLOATPOINT -DFIXEDPOINT)
 
 add_definitions(${SHARED_COMPILE_FLAGS})
@@ -112,7 +112,7 @@ set_property(TARGET pawnamx APPEND_STRING
 set_property(TARGET pawnamx APPEND_STRING
   PROPERTY "SHARED_COMPILE_FLAGS" "${SHARED_COMPILE_FLAGS}")
 set_property(TARGET pawnamx APPEND_STRING
-  PROPERTY "SHARED_INCLUDE_PATHS" "${SHARED_INCLUDE_PATHS}")
+  PROPERTY "SHARED_INCLUDE_DIRECTORIES" "${SHARED_INCLUDE_DIRECTORIES}")
 
 
 # --------------------------------------------------------------------------
