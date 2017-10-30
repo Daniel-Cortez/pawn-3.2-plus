@@ -7,10 +7,17 @@
 
 #include <stdlib.h>
 #include <stdint.h>
-#include <stdbool.h>
 #include <string.h>
 
 #include "hashmap.h"
+
+#ifndef bool
+#define bool	unsigned char
+#endif
+#ifndef true
+#define true	(unsigned char)1
+#define false	(unsigned char)0
+#endif
 
 #ifndef HASHMAP_NOASSERT
 #include <assert.h>
