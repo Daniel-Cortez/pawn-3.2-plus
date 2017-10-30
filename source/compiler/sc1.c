@@ -936,7 +936,7 @@ static void initglobals(void)
   litq=NULL;            /* the literal queue */
   glbtab.next=NULL;     /* clear global variables/constants table */
   loctab.next=NULL;     /*   "   local      "    /    "       "   */
-  hashmap_init(&symbol_cache_map,hashmap_hash_string,hashmap_compare_string,8388608); /* 2^23 */
+  hashmap_init(&symbol_cache_map,hashmap_hash_string,hashmap_compare_string,16384/4*3); /* 16384 slots */
   tagname_tab.next=NULL;/* tagname table */
   libname_tab.next=NULL;/* library table (#pragma library "..." syntax) */
 
