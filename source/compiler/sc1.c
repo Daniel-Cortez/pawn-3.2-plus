@@ -6267,14 +6267,10 @@ static EMIT_OPCODE emit_opcodelist[] = {
   { 92, "zero.s",     emit_parm1_num },
 };
 
-static int emit_findopcode(char *instr,int maxlen)
+static int emit_findopcode(const char *instr,int maxlen)
 {
   int low,high,mid,cmp;
-  char str[MAX_INSTR_LEN];
 
-  if (maxlen>=MAX_INSTR_LEN)
-    return 0;
-  strlcpy(str,instr,maxlen+1);
   /* look up the instruction with a binary search
    * the assembler is case insensitive to instructions (but case sensitive
    * to symbols)
@@ -6284,7 +6280,7 @@ static int emit_findopcode(char *instr,int maxlen)
   while (low<high) {
     mid=(low+high)/2;
     assert(emit_opcodelist[mid].name!=NULL);
-    cmp=stricmp(str,emit_opcodelist[mid].name);
+    cmp=stricmp(instr,emit_opcodelist[mid].name);
     if (cmp>0)
       low=mid+1;
     else
@@ -6292,7 +6288,7 @@ static int emit_findopcode(char *instr,int maxlen)
   } /* while */
 
   assert(low==high);
-  if (stricmp(str,emit_opcodelist[low].name)==0)
+  if (stricmp(instr,emit_opcodelist[low].name)==0)
     return low;         /* found */
   return 0;             /* not found, return special index */
 }
