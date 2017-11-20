@@ -298,6 +298,46 @@ static int VHANDLER_CALL v_lodb_i_strb_i(VERIFICATION_DATA *vdata)
   return 1;
 }
 
+static int VHANDLER_CALL v_lctrl(VERIFICATION_DATA *vdata)
+{
+  cell *arg_addr=PARAMADDR(vdata->cip, 1);
+  const cell arg=*arg_addr;
+  if (AMX_UNLIKELY(arg<0)) {
+    vdata->err=AMX_ERR_PARAMS;
+    return -1;
+  } /* if */
+  if (AMX_UNLIKELY(arg>8))
+    *arg_addr=-1; /* replace unknown ID by -1 */
+  return 1;
+}
+
+static int VHANDLER_CALL v_sctrl(VERIFICATION_DATA *vdata)
+{
+  cell *arg_addr=PARAMADDR(vdata->cip, 1);
+  const cell arg=*arg_addr;
+  switch (arg) {
+  case 0:
+  case 1:
+  case 3:
+  case 7:
+  replace_id:
+    *arg_addr = (cell)-1; /* replace unknown/read-only ID by -1 */
+    /* drop through */
+  case 2:
+  case 4:
+  case 5:
+  case 6:
+  case 8:
+    break;
+  default:
+    if (arg>8)
+      goto replace_id;
+    vdata->err=AMX_ERR_PARAMS;
+    return -1;
+  } /* switch */
+  return 1;
+}
+
 static int VHANDLER_CALL v_stack_heap(VERIFICATION_DATA *vdata)
 {
   cell arg=*PARAMADDR(vdata->cip, 1);
@@ -444,8 +484,8 @@ static const VHANDLER handlers[256] = {
 /* OP_IDXADDR_B */   v_parm1_number,
 /* OP_ALIGN_PRI */   v_parm1_number,
 /* OP_ALIGN_ALT */   v_parm1_number,
-/* OP_LCTRL */       v_parm1_number,
-/* OP_SCTRL */       v_parm1_number,
+/* OP_LCTRL */       v_lctrl,
+/* OP_SCTRL */       v_sctrl,
 /* OP_MOVE_PRI */    v_parm0,
 /* OP_MOVE_ALT */    v_parm0,
 /* OP_XCHG */        v_parm0,
