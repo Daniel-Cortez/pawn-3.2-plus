@@ -651,6 +651,9 @@ int AMXAPI amx_Exec(AMX *amx, cell *retval, int index)
 
     OPHND_CASE(OP_LCTRL):
       switch (GETPARAM(1)) {
+      case -1:
+        /* this is for unknown IDs (replaced by -1 at P-code verification) */
+        break;
       case 0:
         pri=hdr->cod;
         break;
@@ -672,6 +675,12 @@ int AMXAPI amx_Exec(AMX *amx, cell *retval, int index)
       case 6:
         pri=(cell)((size_t)cip - (size_t)code);
         break;
+      case 7:
+        /* PRI is unchanged if JIT isn't present */
+        break;
+      case 8:
+        /* no JIT => no address translation => no actions required */
+        break;
       default:
         AMXEXEC_UNREACHABLE();
       } /* switch */
@@ -679,35 +688,37 @@ int AMXAPI amx_Exec(AMX *amx, cell *retval, int index)
 
     OPHND_CASE(OP_SCTRL):
       switch (GETPARAM(1)) {
-        case 0:
-        case 1:
-        case 3:
-          /* cannot change these parameters */
-          break;
-        case 2:
-          hea=pri;
-          CHKMARGIN();
-          CHKHEAP();
-          break;
-        case 4:
-          stk=pri;
-          CHKMARGIN();
-          CHKSTACK();
-          break;
-        case 5:
-          frm=pri;
-          if (AMX_UNLIKELY(frm<hea+STKMARGIN) || AMX_UNLIKELY((ucell)frm>=(ucell)stp))
-            ERR_STACKERR();
-          break;
-        case 6:
-          /* verify address */
-          if (IS_INVALID_CODE_OFFS_NORELOC(pri,codesize))
-            ERR_MEMACCESS();
-          JUMP_NORELOC(pri);
-          break;
-        default:
-          AMXEXEC_UNREACHABLE();
-        } /* switch */
+      case -1:
+        /* this is for unknown/read-only IDs (replaced by -1 at P-code verification) */
+        break;
+      case 2:
+        hea=pri;
+        CHKMARGIN();
+        CHKHEAP();
+        break;
+      case 4:
+        stk=pri;
+        CHKMARGIN();
+        CHKSTACK();
+        break;
+      case 5:
+        frm=pri;
+        if (AMX_UNLIKELY(frm<hea+STKMARGIN) || AMX_UNLIKELY((ucell)frm>=(ucell)stp))
+          ERR_STACKERR();
+        break;
+      case 6:
+      sctrl_6:
+        /* verify address */
+        if (IS_INVALID_CODE_OFFS_NORELOC(pri,codesize))
+          ERR_MEMACCESS();
+        JUMP_NORELOC(pri);
+        break;
+      case 8:
+        /* without the address translation this should be equal to 'sctrl 6' */
+        goto sctrl_6;
+      default:
+        AMXEXEC_UNREACHABLE();
+      } /* switch */
     OPHND_NEXT(1);
 
     OPHND_CASE(OP_MOVE_PRI):
