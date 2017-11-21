@@ -277,6 +277,7 @@ int AMXAPI amx_Exec(AMX *amx, cell *retval, int index)
   #endif
   cell *cptr,*cptr2;
   ucell datasize;
+  int casetbl_binsearch=0;
 #endif
 
   assert(amx!=NULL);
@@ -681,6 +682,9 @@ int AMXAPI amx_Exec(AMX *amx, cell *retval, int index)
       case 8:
         /* no JIT => no address translation => no actions required */
         break;
+      case 9:
+        pri=(cell)casetbl_binsearch;
+        break;
       default:
         AMXEXEC_UNREACHABLE();
       } /* switch */
@@ -716,6 +720,9 @@ int AMXAPI amx_Exec(AMX *amx, cell *retval, int index)
       case 8:
         /* without the address translation this should be equal to 'sctrl 6' */
         goto sctrl_6;
+      case 9:
+        casetbl_binsearch=(int)pri;
+        break;
       default:
         AMXEXEC_UNREACHABLE();
       } /* switch */
@@ -1423,12 +1430,31 @@ int AMXAPI amx_Exec(AMX *amx, cell *retval, int index)
       /* now cptr points at the number of records in the case table */
       cptr2=cptr+(size_t)(*cptr)*2;
       JUMP(*(cptr+1));                   /* preset to "none-matched" case */
-      while (((cptr+=2),cptr)<=cptr2) {
-        if (AMX_LIKELY(*cptr!=pri))
-          continue;
-        JUMP(*(cptr+1));
-        break;
-      }
+      if (AMX_LIKELY(casetbl_binsearch==0)) {
+        while (((cptr+=2),cptr)<=cptr2) {
+          if (AMX_LIKELY(*cptr!=pri))
+            continue;
+          JUMP(*(cptr+1));
+          break;
+        } /* while */
+      } else {
+        AMX_REGISTER_VAR cell *mid;
+        cptr+=2;
+        cptr2+=2;
+        while (cptr<cptr2) {
+          mid=cptr+((size_t)cptr2-(size_t)cptr)/((size_t)2*sizeof(cell));
+          if (pri<(*mid)) {
+            cptr2=mid;
+            continue;
+          } /* if */
+          if (pri>(*mid)) {
+            cptr=mid+2;
+            continue;
+          } /* if */
+          JUMP(*(mid+1));
+          break;
+        } /* while */
+      } /* if */
     OPHND_NEXT(0);
 
     OPHND_CASE(OP_CASETBL):
