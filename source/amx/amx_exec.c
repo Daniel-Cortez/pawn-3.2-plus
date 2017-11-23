@@ -236,7 +236,7 @@ int AMXAPI amx_Exec(AMX *amx, cell *retval, int index)
     &&HND_OP_PUSH3_ADR,   &&HND_OP_PUSH4_C,     &&HND_OP_PUSH4,       &&HND_OP_PUSH4_S,     &&HND_OP_PUSH4_ADR,
     &&HND_OP_PUSH5_C,     &&HND_OP_PUSH5,       &&HND_OP_PUSH5_S,     &&HND_OP_PUSH5_ADR,   &&HND_OP_LOAD_BOTH,
     &&HND_OP_LOAD_S_BOTH, &&HND_OP_CONST,       &&HND_OP_CONST_S,     &&HND_OP_SYSREQ_D,    &&HND_OP_SYSREQ_ND
-#if defined AMX_DONT_RELOCATE
+  #if defined AMX_DONT_RELOCATE
     ,
     &&HND_OP_NONE,        &&HND_OP_NONE,        &&HND_OP_NONE,        &&HND_OP_NONE,        &&HND_OP_NONE,
     &&HND_OP_NONE,        &&HND_OP_NONE,        &&HND_OP_NONE,        &&HND_OP_NONE,        &&HND_OP_NONE,
@@ -258,7 +258,7 @@ int AMXAPI amx_Exec(AMX *amx, cell *retval, int index)
     &&HND_OP_NONE,        &&HND_OP_NONE,        &&HND_OP_NONE,        &&HND_OP_NONE,        &&HND_OP_NONE,
     &&HND_OP_NONE,        &&HND_OP_NONE,        &&HND_OP_NONE,        &&HND_OP_NONE,        &&HND_OP_NONE,
     &&HND_OP_NONE
-#endif
+  #endif
   };
 #else
   #if defined ASM32 || defined JIT
@@ -270,12 +270,11 @@ int AMXAPI amx_Exec(AMX *amx, cell *retval, int index)
 
 #if defined AMX_EXEC_USE_JUMP_TABLE || !(defined ASM32 || defined JIT)
   cell stp,hlw;
-  cell offs,val;
+  cell val;
   int num=0;
   #if !defined _R_DEFAULT
     int i;
   #endif
-  cell *cptr,*cptr2;
   ucell datasize;
   int casetbl_binsearch=0;
 #endif
@@ -438,37 +437,46 @@ int AMXAPI amx_Exec(AMX *amx, cell *retval, int index)
       alt=_R_DATA_RELOC(data,GETPARAM(1));
     OPHND_NEXT(1);
 
-    OPHND_CASE(OP_LOAD_S_PRI):
+    OPHND_CASE(OP_LOAD_S_PRI): {
+      AMX_REGISTER_VAR cell offs;
       offs=GETPARAM(1);
       if (IS_INVALID_STACK_OFFS(offs))
         ERR_MEMACCESS();
       pri=_R(data,frm+offs);
+    } /* OPHND_CASE */
     OPHND_NEXT(1);
 
-    OPHND_CASE(OP_LOAD_S_ALT):
+    OPHND_CASE(OP_LOAD_S_ALT): {
+      AMX_REGISTER_VAR cell offs;
       offs=GETPARAM(1);
       if (IS_INVALID_STACK_OFFS(offs))
         ERR_MEMACCESS();
       alt=_R(data,frm+offs);
+    } /* OPHND_CASE */
     OPHND_NEXT(1);
 
-    OPHND_CASE(OP_LREF_PRI):
+    OPHND_CASE(OP_LREF_PRI): {
+      AMX_REGISTER_VAR cell offs;
       /* the address is already verified in VerifyRelocateBytecode */
       offs=_R_DATA_RELOC(data,GETPARAM(1));
       if (IS_INVALID_DATA_OFFS(offs,datasize))
         ERR_MEMACCESS();
       pri=_R(data,offs);
+    } /* OPHND_CASE */
     OPHND_NEXT(1);
 
-    OPHND_CASE(OP_LREF_ALT):
+    OPHND_CASE(OP_LREF_ALT): {
+      AMX_REGISTER_VAR cell offs;
       /* the address is already verified in VerifyRelocateBytecode */
       offs=_R_DATA_RELOC(data,GETPARAM(1));
       if (IS_INVALID_DATA_OFFS(offs,datasize))
         ERR_MEMACCESS();
       alt=_R(data,offs);
+    } /* OPHND_CASE */
     OPHND_NEXT(1);
 
-    OPHND_CASE(OP_LREF_S_PRI):
+    OPHND_CASE(OP_LREF_S_PRI): {
+      AMX_REGISTER_VAR cell offs;
       offs=GETPARAM(1);
       if (IS_INVALID_STACK_OFFS(offs))
         ERR_MEMACCESS();
@@ -476,9 +484,11 @@ int AMXAPI amx_Exec(AMX *amx, cell *retval, int index)
       if (IS_INVALID_DATA_OFFS(offs,datasize))
         ERR_MEMACCESS();
       pri=_R(data,offs);
+    } /* OPHND_CASE */
     OPHND_NEXT(1);
 
-    OPHND_CASE(OP_LREF_S_ALT):
+    OPHND_CASE(OP_LREF_S_ALT): {
+      AMX_REGISTER_VAR cell offs;
       offs=GETPARAM(1);
       if (IS_INVALID_STACK_OFFS(offs))
         ERR_MEMACCESS();
@@ -486,6 +496,7 @@ int AMXAPI amx_Exec(AMX *amx, cell *retval, int index)
       if (IS_INVALID_DATA_OFFS(offs,datasize))
         ERR_MEMACCESS();
       alt=_R(data,offs);
+    } /* OPHND_CASE */
     OPHND_NEXT(1);
 
     OPHND_CASE(OP_LOAD_I):
@@ -538,37 +549,46 @@ int AMXAPI amx_Exec(AMX *amx, cell *retval, int index)
       _W_DATA_RELOC(data,GETPARAM(1),alt);
     OPHND_NEXT(1);
 
-    OPHND_CASE(OP_STOR_S_PRI):
+    OPHND_CASE(OP_STOR_S_PRI): {
+      AMX_REGISTER_VAR cell offs;
       offs=GETPARAM(1);
       if (IS_INVALID_STACK_OFFS(offs))
         ERR_MEMACCESS();
       _W(data,frm+offs,pri);
+    } /* OPHND_CASE */
     OPHND_NEXT(1);
 
-    OPHND_CASE(OP_STOR_S_ALT):
+    OPHND_CASE(OP_STOR_S_ALT): {
+      AMX_REGISTER_VAR cell offs;
       offs=GETPARAM(1);
       if (IS_INVALID_STACK_OFFS(offs))
         ERR_MEMACCESS();
       _W(data,frm+offs,alt);
+    } /* OPHND_CASE */
     OPHND_NEXT(1);
 
-    OPHND_CASE(OP_SREF_PRI):
+    OPHND_CASE(OP_SREF_PRI): {
+      AMX_REGISTER_VAR cell offs;
       /* the address is already verified in VerifyRelocateBytecode */
       offs=_R_DATA_RELOC(data,GETPARAM(1));
       if (IS_INVALID_DATA_OFFS(offs,datasize))
         ERR_MEMACCESS();
       _W(data,offs,pri);
+    } /* OPHND_CASE */
     OPHND_NEXT(1);
 
-    OPHND_CASE(OP_SREF_ALT):
+    OPHND_CASE(OP_SREF_ALT): {
+      AMX_REGISTER_VAR cell offs;
       /* the address is already verified in VerifyRelocateBytecode */
       offs=_R_DATA_RELOC(data,GETPARAM(1));
       if (IS_INVALID_DATA_OFFS(offs,datasize))
         ERR_MEMACCESS();
       _W(data,offs,alt);
+    } /* OPHND_CASE */
     OPHND_NEXT(1);
 
-    OPHND_CASE(OP_SREF_S_PRI):
+    OPHND_CASE(OP_SREF_S_PRI): {
+      AMX_REGISTER_VAR cell offs;
       offs=GETPARAM(1);
       if (IS_INVALID_STACK_OFFS(offs))
         ERR_MEMACCESS();
@@ -576,9 +596,11 @@ int AMXAPI amx_Exec(AMX *amx, cell *retval, int index)
       if (IS_INVALID_DATA_OFFS(offs,datasize))
         ERR_MEMACCESS();
       _W(data,offs,pri);
+    } /* OPHND_CASE */
     OPHND_NEXT(1);
 
-    OPHND_CASE(OP_SREF_S_ALT):
+    OPHND_CASE(OP_SREF_S_ALT): {
+      AMX_REGISTER_VAR cell offs;
       offs=GETPARAM(1);
       if (IS_INVALID_STACK_OFFS(offs))
         ERR_MEMACCESS();
@@ -586,6 +608,7 @@ int AMXAPI amx_Exec(AMX *amx, cell *retval, int index)
       if (IS_INVALID_DATA_OFFS(offs,datasize))
         ERR_MEMACCESS();
       _W(data,offs,alt);
+    } /* OPHND_CASE */
     OPHND_NEXT(1);
 
     OPHND_CASE(OP_STOR_I):
@@ -612,18 +635,22 @@ int AMXAPI amx_Exec(AMX *amx, cell *retval, int index)
       } /* switch */
     OPHND_NEXT(1);
 
-    OPHND_CASE(OP_LIDX):
+    OPHND_CASE(OP_LIDX): {
+      AMX_REGISTER_VAR cell offs;
       offs=pri*(cell)sizeof(cell)+alt;  /* implicit shift value for a cell */
       if (IS_INVALID_DATA_STACK_HEAP_OFFS(offs))
         ERR_MEMACCESS();
       pri=_R(data,offs);
+    } /* OPHND_CASE */
     OPHND_NEXT(0);
 
-    OPHND_CASE(OP_LIDX_B):
+    OPHND_CASE(OP_LIDX_B): {
+      AMX_REGISTER_VAR cell offs;
       offs=(pri << (int)GETPARAM(1))+alt;
       if (IS_INVALID_DATA_STACK_HEAP_OFFS(offs))
         ERR_MEMACCESS();
       pri=_R(data,offs);
+    } /* OPHND_CASE */
     OPHND_NEXT(1);
 
     OPHND_CASE(OP_IDXADDR):
@@ -634,20 +661,24 @@ int AMXAPI amx_Exec(AMX *amx, cell *retval, int index)
       pri=(pri << (int)GETPARAM(1))+alt;
     OPHND_NEXT(1);
 
-    OPHND_CASE(OP_ALIGN_PRI):
-    #if BYTE_ORDER==LITTLE_ENDIAN
-      offs=GETPARAM(1);
-      if (offs<(cell)sizeof(cell))
-        pri ^= (cell)sizeof(cell)-offs;
-    #endif /* BYTE_ORDER==LITTLE_ENDIAN */
+    OPHND_CASE(OP_ALIGN_PRI): {
+      #if BYTE_ORDER==LITTLE_ENDIAN
+        AMX_REGISTER_VAR cell offs;
+        offs=GETPARAM(1);
+        if (offs<(cell)sizeof(cell))
+          pri ^= (cell)sizeof(cell)-offs;
+      #endif /* BYTE_ORDER==LITTLE_ENDIAN */
+    } /* OPHND_CASE */
     OPHND_NEXT(1);
 
-    OPHND_CASE(OP_ALIGN_ALT):
-    #if BYTE_ORDER==LITTLE_ENDIAN
-      offs=GETPARAM(1);
-      if (offs<(cell)sizeof(cell))
-        alt ^= (cell)sizeof(cell)-offs;
-    #endif /* BYTE_ORDER==LITTLE_ENDIAN */
+    OPHND_CASE(OP_ALIGN_ALT): {
+      #if BYTE_ORDER==LITTLE_ENDIAN
+        AMX_REGISTER_VAR cell offs;
+        offs=GETPARAM(1);
+        if (offs<(cell)sizeof(cell))
+          alt ^= (cell)sizeof(cell)-offs;
+      #endif /* BYTE_ORDER==LITTLE_ENDIAN */
+    } /* OPHND_CASE */
     OPHND_NEXT(1);
 
     OPHND_CASE(OP_LCTRL):
@@ -736,10 +767,12 @@ int AMXAPI amx_Exec(AMX *amx, cell *retval, int index)
       alt=pri;
     OPHND_NEXT(0);
 
-    OPHND_CASE(OP_XCHG):
+    OPHND_CASE(OP_XCHG): {
+      AMX_REGISTER_VAR cell offs;
       offs=pri;
       pri=alt;
       alt=offs;
+    } /* OPHND_CASE */
     OPHND_NEXT(0);
 
     OPHND_CASE(OP_PUSH_PRI):
@@ -750,29 +783,36 @@ int AMXAPI amx_Exec(AMX *amx, cell *retval, int index)
       PUSH(alt);
     OPHND_NEXT(0);
 
-    OPHND_CASE(OP_PUSH_R):
+    OPHND_CASE(OP_PUSH_R): {
+      AMX_REGISTER_VAR cell offs;
+      AMX_REGISTER_VAR cell *cptr,*cptr2;
       offs=GETPARAM(1);
       ALLOCSTACK(offs);
       cptr2=cptr-(size_t)offs;
       while (cptr2<cptr)
-        *(cptr2++)=pri;
+        *(cptr2++) = pri;
+    } /* OPHND_CASE */
     OPHND_NEXT(1);
 
     OPHND_CASE(OP_PUSH_C):
       PUSH(GETPARAM(1));
     OPHND_NEXT(1);
 
-    OPHND_CASE(OP_PUSH):
+    OPHND_CASE(OP_PUSH): {
+      AMX_REGISTER_VAR cell offs;
       offs=GETPARAM(1);
       /* the address is already verified in VerifyRelocateBytecode */
       PUSH(_R_DATA_RELOC(data,offs));
+    } /* OPHND_CASE */
     OPHND_NEXT(1);
 
-    OPHND_CASE(OP_PUSH_S):
+    OPHND_CASE(OP_PUSH_S): {
+      AMX_REGISTER_VAR cell offs;
       offs=GETPARAM(1);
       if (IS_INVALID_STACK_OFFS(offs))
         ERR_MEMACCESS();
       PUSH(_R(data,frm+offs));
+    } /* OPHND_CASE */
     OPHND_NEXT(1);
 
     OPHND_CASE(OP_POP_PRI):
@@ -802,7 +842,9 @@ int AMXAPI amx_Exec(AMX *amx, cell *retval, int index)
       frm=stk;
     OPHND_NEXT(0);
 
-    OPHND_CASE(OP_RET):
+    OPHND_CASE(OP_RET): {
+      AMX_REGISTER_VAR cell offs;
+      AMX_REGISTER_VAR cell *cptr;
       FREESTACK(2);
       frm=*cptr;
       offs=*(cptr+1);
@@ -810,9 +852,12 @@ int AMXAPI amx_Exec(AMX *amx, cell *retval, int index)
       if (IS_INVALID_CODE_OFFS_NORELOC(offs,codesize))
           ERR_MEMACCESS();
       JUMP_NORELOC(offs);
+    } /* OPHND_CASE */
     OPHND_NEXT(0);
 
-    OPHND_CASE(OP_RETN):
+    OPHND_CASE(OP_RETN): {
+      AMX_REGISTER_VAR cell offs;
+      AMX_REGISTER_VAR cell *cptr;
       FREESTACK(2);
       frm=*cptr;
       offs=*(cptr+1);
@@ -822,6 +867,7 @@ int AMXAPI amx_Exec(AMX *amx, cell *retval, int index)
       stk+=_R(data,stk)+(cell)sizeof(cell); /* remove parameters from the stack */
       CHKSTACK();
       JUMP_NORELOC(offs);
+    } /* OPHND_CASE */
     OPHND_NEXT(0);
 
     OPHND_CASE(OP_CALL):
@@ -976,7 +1022,8 @@ int AMXAPI amx_Exec(AMX *amx, cell *retval, int index)
       pri*=alt;
     OPHND_NEXT(0);
 
-    OPHND_CASE(OP_SDIV):
+    OPHND_CASE(OP_SDIV): {
+      AMX_REGISTER_VAR cell offs;
       if (AMX_UNLIKELY(alt==0))
         ERR_DIVIDE();
       /* use floored division and matching remainder */
@@ -996,9 +1043,11 @@ int AMXAPI amx_Exec(AMX *amx, cell *retval, int index)
         pri--;
         alt+=offs;
       } /* if */
+    } /* OPHND_CASE */
     OPHND_NEXT(0);
 
-    OPHND_CASE(OP_SDIV_ALT):
+    OPHND_CASE(OP_SDIV_ALT): {
+      AMX_REGISTER_VAR cell offs;
       if (AMX_UNLIKELY(pri==0))
         ERR_DIVIDE();
       /* use floored division and matching remainder */
@@ -1018,26 +1067,31 @@ int AMXAPI amx_Exec(AMX *amx, cell *retval, int index)
         pri--;
         alt+=offs;
       } /* if */
+    } /* OPHND_CASE */
     OPHND_NEXT(0);
 
     OPHND_CASE(OP_UMUL):
       pri=(cell)((ucell)pri * (ucell)alt);
     OPHND_NEXT(0);
 
-    OPHND_CASE(OP_UDIV):
+    OPHND_CASE(OP_UDIV): {
+      AMX_REGISTER_VAR cell offs;
       if (AMX_UNLIKELY(alt==0))
         ERR_DIVIDE();
       offs=(cell)((ucell)pri % (ucell)alt); /* temporary storage */
       pri=(cell)((ucell)pri / (ucell)alt);
       alt=offs;
+    } /* OPHND_CASE */
     OPHND_NEXT(0);
 
-    OPHND_CASE(OP_UDIV_ALT):
+    OPHND_CASE(OP_UDIV_ALT): {
+      AMX_REGISTER_VAR cell offs;
       if (AMX_UNLIKELY(pri==0))
         ERR_DIVIDE();
       offs=(cell)((ucell)alt % (ucell)pri);     /* temporary storage */
       pri=(cell)((ucell)alt / (ucell)pri);
       alt=offs;
+    } /* OPHND_CASE */
     OPHND_NEXT(0);
 
     OPHND_CASE(OP_ADD):
@@ -1097,11 +1151,13 @@ int AMXAPI amx_Exec(AMX *amx, cell *retval, int index)
       _W_DATA_RELOC(data,GETPARAM(1),0);
     OPHND_NEXT(1);
 
-    OPHND_CASE(OP_ZERO_S):
+    OPHND_CASE(OP_ZERO_S): {
+      AMX_REGISTER_VAR cell offs;
       offs=GETPARAM(1);
       if (IS_INVALID_STACK_OFFS(offs))
         ERR_MEMACCESS();
       _W(data,frm+offs,0);
+    } /* OPHND_CASE */
     OPHND_NEXT(1);
 
     OPHND_CASE(OP_SIGN_PRI):
@@ -1170,7 +1226,7 @@ int AMXAPI amx_Exec(AMX *amx, cell *retval, int index)
       alt++;
     OPHND_NEXT(0);
 
-    OPHND_CASE(OP_INC):
+    OPHND_CASE(OP_INC): {
       /* the address is already verified in VerifyRelocateBytecode */
       #if defined _R_DEFAULT
         #if defined AMX_DONT_RELOCATE
@@ -1179,13 +1235,16 @@ int AMXAPI amx_Exec(AMX *amx, cell *retval, int index)
           *(cell *)(size_t)GETPARAM(1) += 1;
         #endif
       #else
+        AMX_REGISTER_VAR cell offs;
         offs=GETPARAM(1);
         val=_R(data,offs);
         _W(data,offs,val+1);
       #endif
+    } /* OPHND_CASE */
     OPHND_NEXT(1);
 
-    OPHND_CASE(OP_INC_S):
+    OPHND_CASE(OP_INC_S): {
+      AMX_REGISTER_VAR cell offs;
       offs=GETPARAM(1);
       if (IS_INVALID_STACK_OFFS(offs))
         ERR_MEMACCESS();
@@ -1195,6 +1254,7 @@ int AMXAPI amx_Exec(AMX *amx, cell *retval, int index)
         val=_R(data,frm+offs);
         _W(data,frm+offs,val+1);
       #endif
+    } /* OPHND_CASE */
     OPHND_NEXT(1);
 
     OPHND_CASE(OP_INC_I):
@@ -1216,7 +1276,7 @@ int AMXAPI amx_Exec(AMX *amx, cell *retval, int index)
       alt--;
     OPHND_NEXT(0);
 
-    OPHND_CASE(OP_DEC):
+    OPHND_CASE(OP_DEC): {
       /* the address is already verified in VerifyRelocateBytecode */
       #if defined _R_DEFAULT
         #if defined AMX_DONT_RELOCATE
@@ -1225,13 +1285,16 @@ int AMXAPI amx_Exec(AMX *amx, cell *retval, int index)
           *(cell *)(size_t)GETPARAM(1) -= 1;
         #endif
       #else
+        AMX_REGISTER_VAR cell offs;
         offs=GETPARAM(1);
         val=_R(data,offs);
         _W(data,offs,val-1);
       #endif
+    } /* OPHND_CASE */
     OPHND_NEXT(1);
 
-    OPHND_CASE(OP_DEC_S):
+    OPHND_CASE(OP_DEC_S): {
+      AMX_REGISTER_VAR cell offs;
       offs=GETPARAM(1);
       if (IS_INVALID_STACK_OFFS(offs))
         ERR_MEMACCESS();
@@ -1241,6 +1304,7 @@ int AMXAPI amx_Exec(AMX *amx, cell *retval, int index)
         val=_R(data,frm+offs);
         _W(data,frm+offs,val-1);
       #endif
+    } /* OPHND_CASE */
     OPHND_NEXT(1);
 
     OPHND_CASE(OP_DEC_I):
@@ -1254,7 +1318,8 @@ int AMXAPI amx_Exec(AMX *amx, cell *retval, int index)
       #endif
     OPHND_NEXT(1);
 
-    OPHND_CASE(OP_MOVS):
+    OPHND_CASE(OP_MOVS): {
+      AMX_REGISTER_VAR cell offs;
       if (IS_INVALID_DATA_STACK_HEAP_OFFS(pri))
         ERR_MEMACCESS();
       offs=GETPARAM(1);
@@ -1282,9 +1347,11 @@ int AMXAPI amx_Exec(AMX *amx, cell *retval, int index)
           _W8(data,alt+i,val);
         } /* for */
       #endif
+    } /* OPHND_CASE */
     OPHND_NEXT(1);
 
-    OPHND_CASE(OP_CMPS):
+    OPHND_CASE(OP_CMPS): {
+      AMX_REGISTER_VAR cell offs;
       if (IS_INVALID_DATA_STACK_HEAP_OFFS(pri))
         ERR_MEMACCESS();
       offs=GETPARAM(1);
@@ -1300,19 +1367,22 @@ int AMXAPI amx_Exec(AMX *amx, cell *retval, int index)
         ERR_MEMACCESS();
       if (AMX_UNLIKELY(alt<=hea && hea<=offs) || AMX_UNLIKELY(alt<=stk && stk<=offs))
         ERR_MEMACCESS();
-    #if defined _R_DEFAULT
-      pri=memcmp(data+(size_t)alt, data+(size_t)pri, (size_t)offs);
-    #else
-      val=pri;
-      for (i=0,num=(int)offs-4; i<num; i+=4)
-        if ((pri=_R32(data,alt+i)-_R32(data,val+i))!=0)
-          break;
-      for (num+=4; i<num && pri==0; i++)
-        pri=_R8(data,alt+i)-_R8(data,val+i);
-    #endif
+      #if defined _R_DEFAULT
+        pri=memcmp(data+(size_t)alt, data+(size_t)pri, (size_t)offs);
+      #else
+        val=pri;
+        for (i=0,num=(int)offs-4; i<num; i+=4)
+          if ((pri=_R32(data,alt+i)-_R32(data,val+i))!=0)
+            break;
+        for (num+=4; i<num && pri==0; i++)
+          pri=_R8(data,alt+i)-_R8(data,val+i);
+      #endif
+    } /* OPHND_CASE */
     OPHND_NEXT(1);
 
-    OPHND_CASE(OP_FILL):
+    OPHND_CASE(OP_FILL): {
+      AMX_REGISTER_VAR cell offs;
+      AMX_REGISTER_VAR cell *cptr,*cptr2;
       if (IS_INVALID_DATA_STACK_HEAP_OFFS(alt))
         ERR_MEMACCESS();
       offs=GETPARAM(1);
@@ -1330,6 +1400,7 @@ int AMXAPI amx_Exec(AMX *amx, cell *retval, int index)
         for (i=(int)alt; offs>=(int)sizeof(cell); i+=sizeof(cell), offs-=sizeof(cell))
           _W(data,i,pri);
       #endif
+    } /* OPHND_CASE */
     OPHND_NEXT(1);
 
     OPHND_CASE(OP_HALT):
@@ -1365,8 +1436,8 @@ int AMXAPI amx_Exec(AMX *amx, cell *retval, int index)
       amx->frm=frm;
       amx->stk=stk;
       #if defined AMX_USE_REGISTER_VARIABLES
-        num=amx->callback(amx,pri,&offs,(cell *)(void *)(data+(size_t)stk));
-        pri=offs;
+        num=amx->callback(amx,pri,&val,(cell *)(void *)(data+(size_t)stk));
+        pri=val;
       #else
         num=amx->callback(amx,pri,&pri,(cell *)(void *)(data+(size_t)stk));
       #endif
@@ -1391,8 +1462,8 @@ int AMXAPI amx_Exec(AMX *amx, cell *retval, int index)
       amx->frm=frm;
       amx->stk=stk;
       #if defined AMX_USE_REGISTER_VARIABLES
-        num=amx->callback(amx,GETPARAM(1),&offs,(cell *)(void *)(data+(size_t)stk));
-        pri=offs;
+        num=amx->callback(amx,GETPARAM(1),&val,(cell *)(void *)(data+(size_t)stk));
+        pri=val;
       #else
         num=amx->callback(amx,GETPARAM(1),&pri,(cell *)(void *)(data+(size_t)stk));
       #endif
@@ -1424,7 +1495,8 @@ int AMXAPI amx_Exec(AMX *amx, cell *retval, int index)
       JUMP_NORELOC(pri);
     OPHND_NEXT(0);
 
-    OPHND_CASE(OP_SWITCH):
+    OPHND_CASE(OP_SWITCH): {
+      AMX_REGISTER_VAR cell *cptr,*cptr2;
       /* all of the addresses are verified in VerifyRelocateBytecode */
       cptr=JUMPABS(code,&GETPARAM(1))+1; /* +1, to skip the "casetbl" opcode */
       /* now cptr points at the number of records in the case table */
@@ -1455,22 +1527,27 @@ int AMXAPI amx_Exec(AMX *amx, cell *retval, int index)
           break;
         } /* while */
       } /* if */
+    } /* OPHND_CASE */
     OPHND_NEXT(0);
 
     OPHND_CASE(OP_CASETBL):
       assert(0); /* this code should not occur during execution */
       ERR_INVINSTR();
 
-    OPHND_CASE(OP_SWAP_PRI):
+    OPHND_CASE(OP_SWAP_PRI): {
+      AMX_REGISTER_VAR cell offs;
       offs=_R(data,stk);
       _W32(data,stk,pri);
       pri=offs;
+    } /* OPHND_CASE */
     OPHND_NEXT(0);
 
-    OPHND_CASE(OP_SWAP_ALT):
+    OPHND_CASE(OP_SWAP_ALT): {
+      AMX_REGISTER_VAR cell offs;
       offs=_R(data,stk);
       _W32(data,stk,alt);
       alt=offs;
+    } /* OPHND_CASE */
     OPHND_NEXT(0);
 
     OPHND_CASE(OP_PUSH_ADR):
@@ -1480,23 +1557,25 @@ int AMXAPI amx_Exec(AMX *amx, cell *retval, int index)
     OPHND_CASE(OP_NOP):
     OPHND_NEXT(0);
 
-    OPHND_CASE(OP_SYSREQ_N):
-      val=GETPARAM(2);
-      PUSH(val);
+    OPHND_CASE(OP_SYSREQ_N): {
+      AMX_REGISTER_VAR cell offs;
+      offs=GETPARAM(2);
+      PUSH(offs);
       /* save a few registers */
       amx->cip=(cell)((size_t)cip-(size_t)code+sizeof(cell)*2);
       amx->hea=hea;
       amx->frm=frm;
       amx->stk=stk;
-    #if defined AMX_USE_REGISTER_VARIABLES
-      num=amx->callback(amx,GETPARAM(1),&offs,(cell *)(void *)(data+(size_t)stk));
-      pri=offs;
-    #else
-      num=amx->callback(amx,GETPARAM(1),&pri,(cell *)(void *)(data+(size_t)stk));
-    #endif
-      stk+=val+(cell)sizeof(cell);
+      #if defined AMX_USE_REGISTER_VARIABLES
+        num=amx->callback(amx,GETPARAM(1),&val,(cell *)(void *)(data+(size_t)stk));
+        pri=val;
+      #else
+        num=amx->callback(amx,GETPARAM(1),&pri,(cell *)(void *)(data+(size_t)stk));
+      #endif
+      stk+=offs+(cell)sizeof(cell);
       if (AMX_UNLIKELY(num!=AMX_ERR_NONE))
         goto sysreq_err;
+    } /* OPHND_CASE */
     OPHND_NEXT(2);
 
     OPHND_CASE(OP_BREAK):
@@ -1522,37 +1601,46 @@ int AMXAPI amx_Exec(AMX *amx, cell *retval, int index)
       } /* if */
     OPHND_NEXT(0);
 
-    OPHND_CASE(OP_PUSH5_C):
+    OPHND_CASE(OP_PUSH5_C): {
+      AMX_REGISTER_VAR cell *cptr;
       ALLOCSTACK(5);
       *(cptr-1)=GETPARAM(1);
       *(cptr-2)=GETPARAM(2);
       *(cptr-3)=GETPARAM(3);
       *(cptr-4)=GETPARAM(4);
       *(cptr-5)=GETPARAM(5);
+    } /* OPHND_CASE */
     OPHND_NEXT(5);
 
-    OPHND_CASE(OP_PUSH4_C):
+    OPHND_CASE(OP_PUSH4_C): {
+      AMX_REGISTER_VAR cell *cptr;
       ALLOCSTACK(4);
       *(cptr-1)=GETPARAM(1);
       *(cptr-2)=GETPARAM(2);
       *(cptr-3)=GETPARAM(3);
       *(cptr-4)=GETPARAM(4);
+    } /* OPHND_CASE */
     OPHND_NEXT(4);
 
-    OPHND_CASE(OP_PUSH3_C):
+    OPHND_CASE(OP_PUSH3_C): {
+      AMX_REGISTER_VAR cell *cptr;
       ALLOCSTACK(3);
       *(cptr-1)=GETPARAM(1);
       *(cptr-2)=GETPARAM(2);
       *(cptr-3)=GETPARAM(3);
+    } /* OPHND_CASE */
     OPHND_NEXT(3);
 
-    OPHND_CASE(OP_PUSH2_C):
+    OPHND_CASE(OP_PUSH2_C): {
+      AMX_REGISTER_VAR cell *cptr;
       ALLOCSTACK(2);
       *(cptr-1)=GETPARAM(1);
       *(cptr-2)=GETPARAM(2);
+    } /* OPHND_CASE */
     OPHND_NEXT(2);
 
-    OPHND_CASE(OP_PUSH5):
+    OPHND_CASE(OP_PUSH5): {
+      AMX_REGISTER_VAR cell *cptr;
       /* the addresses are already verified in VerifyRelocateBytecode */
       ALLOCSTACK(5);
       *(cptr-1)=_R_DATA_RELOC(data,GETPARAM(1));
@@ -1560,30 +1648,39 @@ int AMXAPI amx_Exec(AMX *amx, cell *retval, int index)
       *(cptr-3)=_R_DATA_RELOC(data,GETPARAM(3));
       *(cptr-4)=_R_DATA_RELOC(data,GETPARAM(4));
       *(cptr-5)=_R_DATA_RELOC(data,GETPARAM(5));
+    } /* OPHND_CASE */
     OPHND_NEXT(5);
 
-    OPHND_CASE(OP_PUSH4):
+    OPHND_CASE(OP_PUSH4): {
+      AMX_REGISTER_VAR cell *cptr;
       ALLOCSTACK(4);
       *(cptr-1)=_R_DATA_RELOC(data,GETPARAM(1));
       *(cptr-2)=_R_DATA_RELOC(data,GETPARAM(2));
       *(cptr-3)=_R_DATA_RELOC(data,GETPARAM(3));
       *(cptr-4)=_R_DATA_RELOC(data,GETPARAM(4));
+    } /* OPHND_CASE */
     OPHND_NEXT(4);
 
-    OPHND_CASE(OP_PUSH3):
+    OPHND_CASE(OP_PUSH3): {
+      AMX_REGISTER_VAR cell *cptr;
       ALLOCSTACK(3);
       *(cptr-1)=_R_DATA_RELOC(data,GETPARAM(1));
       *(cptr-2)=_R_DATA_RELOC(data,GETPARAM(2));
       *(cptr-3)=_R_DATA_RELOC(data,GETPARAM(3));
+    } /* OPHND_CASE */
     OPHND_NEXT(3);
 
-    OPHND_CASE(OP_PUSH2):
+    OPHND_CASE(OP_PUSH2): {
+      AMX_REGISTER_VAR cell *cptr;
       ALLOCSTACK(2);
       *(cptr-1)=_R_DATA_RELOC(data,GETPARAM(1));
       *(cptr-2)=_R_DATA_RELOC(data,GETPARAM(2));
+    } /* OPHND_CASE */
     OPHND_NEXT(2);
 
-    OPHND_CASE(OP_PUSH5_S):
+    OPHND_CASE(OP_PUSH5_S): {
+      AMX_REGISTER_VAR cell offs;
+      AMX_REGISTER_VAR cell *cptr;
       ALLOCSTACK(5);
       if (((offs=GETPARAM(1)),IS_INVALID_STACK_OFFS(offs)))
         ERR_MEMACCESS();
@@ -1600,9 +1697,12 @@ int AMXAPI amx_Exec(AMX *amx, cell *retval, int index)
       if (((offs=GETPARAM(5)),IS_INVALID_STACK_OFFS(offs)))
         ERR_MEMACCESS();
       *(cptr-5)=_R(data,frm+offs);
+    } /* OPHND_CASE */
     OPHND_NEXT(5);
 
-    OPHND_CASE(OP_PUSH4_S):
+    OPHND_CASE(OP_PUSH4_S): {
+      AMX_REGISTER_VAR cell offs;
+      AMX_REGISTER_VAR cell *cptr;
       ALLOCSTACK(4);
       if (((offs=GETPARAM(1)),IS_INVALID_STACK_OFFS(offs)))
         ERR_MEMACCESS();
@@ -1616,9 +1716,12 @@ int AMXAPI amx_Exec(AMX *amx, cell *retval, int index)
       if (((offs=GETPARAM(4)),IS_INVALID_STACK_OFFS(offs)))
         ERR_MEMACCESS();
       *(cptr-4)=_R(data,frm+offs);
+    } /* OPHND_CASE */
     OPHND_NEXT(4);
 
-    OPHND_CASE(OP_PUSH3_S):
+    OPHND_CASE(OP_PUSH3_S): {
+      AMX_REGISTER_VAR cell offs;
+      AMX_REGISTER_VAR cell *cptr;
       ALLOCSTACK(3);
       if (((offs=GETPARAM(1)),IS_INVALID_STACK_OFFS(offs)))
         ERR_MEMACCESS();
@@ -1629,9 +1732,12 @@ int AMXAPI amx_Exec(AMX *amx, cell *retval, int index)
       if (((offs=GETPARAM(3)),IS_INVALID_STACK_OFFS(offs)))
         ERR_MEMACCESS();
       *(cptr-3)=_R(data,frm+offs);
+    } /* OPHND_CASE */
     OPHND_NEXT(3);
 
-    OPHND_CASE(OP_PUSH2_S):
+    OPHND_CASE(OP_PUSH2_S): {
+      AMX_REGISTER_VAR cell offs;
+      AMX_REGISTER_VAR cell *cptr;
       ALLOCSTACK(2);
       if (((offs=GETPARAM(1)),IS_INVALID_STACK_OFFS(offs)))
         ERR_MEMACCESS();
@@ -1639,36 +1745,45 @@ int AMXAPI amx_Exec(AMX *amx, cell *retval, int index)
       if (((offs=GETPARAM(2)),IS_INVALID_STACK_OFFS(offs)))
         ERR_MEMACCESS();
       *(cptr-2)=_R(data,frm+offs);
+    } /* OPHND_CASE */
     OPHND_NEXT(2);
 
-    OPHND_CASE(OP_PUSH5_ADR):
+    OPHND_CASE(OP_PUSH5_ADR): {
+      AMX_REGISTER_VAR cell *cptr;
       ALLOCSTACK(5);
       *(cptr-1)=frm+GETPARAM(1);
       *(cptr-2)=frm+GETPARAM(2);
       *(cptr-3)=frm+GETPARAM(3);
       *(cptr-4)=frm+GETPARAM(4);
       *(cptr-5)=frm+GETPARAM(5);
+    } /* OPHND_CASE */
     OPHND_NEXT(5);
 
-    OPHND_CASE(OP_PUSH4_ADR):
+    OPHND_CASE(OP_PUSH4_ADR): {
+      AMX_REGISTER_VAR cell *cptr;
       ALLOCSTACK(4);
       *(cptr-1)=frm+GETPARAM(1);
       *(cptr-2)=frm+GETPARAM(2);
       *(cptr-3)=frm+GETPARAM(3);
       *(cptr-4)=frm+GETPARAM(4);
+    } /* OPHND_CASE */
     OPHND_NEXT(4);
 
-    OPHND_CASE(OP_PUSH3_ADR):
+    OPHND_CASE(OP_PUSH3_ADR): {
+      AMX_REGISTER_VAR cell *cptr;
       ALLOCSTACK(3);
       *(cptr-1)=frm+GETPARAM(1);
       *(cptr-2)=frm+GETPARAM(2);
       *(cptr-3)=frm+GETPARAM(3);
+    } /* OPHND_CASE */
     OPHND_NEXT(3);
 
-    OPHND_CASE(OP_PUSH2_ADR):
+    OPHND_CASE(OP_PUSH2_ADR): {
+      AMX_REGISTER_VAR cell *cptr;
       ALLOCSTACK(2);
       *(cptr-1)=frm+GETPARAM(1);
       *(cptr-2)=frm+GETPARAM(2);
+    } /* OPHND_CASE */
     OPHND_NEXT(2);
 
     OPHND_CASE(OP_LOAD_BOTH):
@@ -1677,7 +1792,8 @@ int AMXAPI amx_Exec(AMX *amx, cell *retval, int index)
       alt=_R_DATA_RELOC(data,GETPARAM(2));
     OPHND_NEXT(2);
 
-    OPHND_CASE(OP_LOAD_S_BOTH):
+    OPHND_CASE(OP_LOAD_S_BOTH): {
+      AMX_REGISTER_VAR cell offs;
       offs=GETPARAM(1);
       val=GETPARAM(2);
       if (IS_INVALID_STACK_OFFS(offs))
@@ -1686,6 +1802,7 @@ int AMXAPI amx_Exec(AMX *amx, cell *retval, int index)
         ERR_MEMACCESS();
       pri=_R(data,frm+offs);
       alt=_R(data,frm+val);
+    } /* OPHND_CASE */
     OPHND_NEXT(2);
 
     OPHND_CASE(OP_CONST):
@@ -1693,11 +1810,13 @@ int AMXAPI amx_Exec(AMX *amx, cell *retval, int index)
       _W_DATA_RELOC(data,GETPARAM(1),GETPARAM(2));
     OPHND_NEXT(2);
 
-    OPHND_CASE(OP_CONST_S):
+    OPHND_CASE(OP_CONST_S): {
+      AMX_REGISTER_VAR cell offs;
       offs=GETPARAM(1);
       if (IS_INVALID_STACK_OFFS(offs))
         ERR_MEMACCESS();
       _W(data,frm+offs,GETPARAM(2));
+    } /* OPHND_CASE */
     OPHND_NEXT(2);
 
     OPHND_CASE(OP_SYSREQ_D):
@@ -1719,24 +1838,26 @@ int AMXAPI amx_Exec(AMX *amx, cell *retval, int index)
     OPHND_NEXT(1);
     #endif
 
-    OPHND_CASE(OP_SYSREQ_ND):
-    #if defined AMX_DONT_RELOCATE
-      assert(0); /* this code should not occur if relocation is disabled */
-      ERR_INVINSTR();
-    #else
-      val=GETPARAM(2);
-      PUSH(val);
-      /* save a few registers */
-      amx->cip=(cell)((size_t)cip-(size_t)code+sizeof(cell)*2);
-      amx->hea=hea;
-      amx->frm=frm;
-      amx->stk=stk;
-      pri=((AMX_NATIVE)(size_t)GETPARAM(1))(amx,(cell *)(void *)(data+(size_t)stk));
-      stk+=val+(cell)sizeof(cell);
-      if (AMX_UNLIKELY(amx->error!=AMX_ERR_NONE))
-        goto sysreq_d_err;
-    OPHND_NEXT(2);
-    #endif
+    OPHND_CASE(OP_SYSREQ_ND): {
+      #if defined AMX_DONT_RELOCATE
+        assert(0); /* this code should not occur if relocation is disabled */
+        ERR_INVINSTR();
+      #else
+        AMX_REGISTER_VAR cell offs;
+        offs=GETPARAM(2);
+        PUSH(offs);
+        /* save a few registers */
+        amx->cip=(cell)((size_t)cip-(size_t)code+sizeof(cell)*2);
+        amx->hea=hea;
+        amx->frm=frm;
+        amx->stk=stk;
+        pri=((AMX_NATIVE)(size_t)GETPARAM(1))(amx,(cell *)(void *)(data+(size_t)stk));
+        stk+=offs+(cell)sizeof(cell);
+        if (AMX_UNLIKELY(amx->error!=AMX_ERR_NONE))
+          goto sysreq_d_err;
+        OPHND_NEXT(2);
+      #endif
+    } /* OPHND_CASE */
 
     OPHND_DEFAULT();
   }
