@@ -1450,7 +1450,7 @@ int AMXAPI amx_Exec(AMX *amx, cell *retval, int index)
 
     OPHND_CASE(OP_SYSREQ_C):
       /* save a few registers */
-      amx->cip=(cell)((size_t)cip-(size_t)code+sizeof(cell));
+      amx->cip=(cell)((size_t)cip-(size_t)code);
       amx->hea=hea;
       amx->frm=frm;
       amx->stk=stk;
@@ -1555,7 +1555,7 @@ int AMXAPI amx_Exec(AMX *amx, cell *retval, int index)
       offs=GETPARAM(2);
       PUSH(offs);
       /* save a few registers */
-      amx->cip=(cell)((size_t)cip-(size_t)code+sizeof(cell)*2);
+      amx->cip=(cell)((size_t)cip-(size_t)code);
       amx->hea=hea;
       amx->frm=frm;
       amx->stk=stk;
@@ -1818,7 +1818,7 @@ int AMXAPI amx_Exec(AMX *amx, cell *retval, int index)
       ERR_INVINSTR();
     #else
       /* save a few registers */
-      amx->cip=(cell)((size_t)cip-(size_t)code+sizeof(cell));
+      amx->cip=(cell)((size_t)cip-(size_t)code);
       amx->hea=hea;
       amx->frm=frm;
       amx->stk=stk;
@@ -1840,7 +1840,7 @@ int AMXAPI amx_Exec(AMX *amx, cell *retval, int index)
         offs=GETPARAM(2);
         PUSH(offs);
         /* save a few registers */
-        amx->cip=(cell)((size_t)cip-(size_t)code+sizeof(cell)*2);
+        amx->cip=(cell)((size_t)cip-(size_t)code);
         amx->hea=hea;
         amx->frm=frm;
         amx->stk=stk;
