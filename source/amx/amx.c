@@ -261,17 +261,36 @@ int AMXAPI amx_Callback(AMX *amx, cell index, cell *result, const cell *params)
        * behind the SYSREQ instruction and its parameter(s)
        */
       unsigned char *code=amx->base+(int)hdr->cod+(int)amx->cip-sizeof(cell);
+#if defined AMX_USE_NEW_AMXEXEC
+#if defined AMX_EXEC_USE_JUMP_TABLE
+      static void **jump_table=NULL;
+      if (AMX_UNLIKELY(jump_table==NULL)) {
+        const int flags_bck=amx->flags;
+        amx->flags |= AMX_FLAG_BROWSE;
+        amx_Exec(amx,(cell *)(size_t)&jump_table,AMX_EXEC_CONT);
+        amx->flags=flags_bck;
+      } /* if */
+      if (*(cell *)code!=(cell)(size_t)jump_table[OP_SYSREQ_PRI]) {
+        assert(*(cell*)(code)==(cell)(size_t)jump_table[OP_SYSREQ_C]
+            || *(cell*)(code)==(cell)(size_t)jump_table[OP_SYSREQ_N]);
+#else
+      if (*(cell *)code != (cell)OP_SYSREQ_PRI) {
+        assert(*(cell*)(code)==OP_SYSREQ_C || *(cell*)(code)==OP_SYSREQ_N);
+#endif
+        code+=sizeof(cell);
+        assert(*(cell*)code==index);
+#else /* defined AMX_USE_NEW_AMXEXEC */
       assert(amx->cip >= 4 && amx->cip < (hdr->dat - hdr->cod));
-      assert_static(sizeof(f)<=sizeof(cell)); /* function pointer must fit in a cell */
       if (amx->flags & AMX_FLAG_SYSREQN)		/* SYSREQ.N has 2 parameters */
         code-=sizeof(cell);
-#if defined AMX_EXEC_USE_JUMP_TABLE && !defined AMX_DONT_RELOCATE
+#if defined AMX_EXEC_USE_JUMP_TABLE
       if (*(cell*)code==index) {
 #else
       if (*(cell*)code!=OP_SYSREQ_PRI) {
         assert(*(cell*)(code-sizeof(cell))==OP_SYSREQ_C || *(cell*)(code-sizeof(cell))==OP_SYSREQ_N);
         assert(*(cell*)code==index);
 #endif
+#endif /* defined AMX_USE_NEW_AMXEXEC */
         *(cell*)(code-sizeof(cell))=amx->sysreq_d;
         *(cell*)code=(cell)f;
       } /* if */
