@@ -79,6 +79,7 @@ add_definitions(${SHARED_COMPILE_FLAGS})
 set(PAWNAMX_SRCS
   "amx.h"
   "amx_internal.h"
+  "amx_opcodes.h"
   "amx.c"
   "amx_exec.c"
   "amx_verifier.c"
