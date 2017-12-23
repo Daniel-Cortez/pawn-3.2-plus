@@ -1400,13 +1400,13 @@ int AMXAPI amx_Exec(AMX *amx, cell *retval, int index)
       num=GETPARAM(1);
       if (AMX_LIKELY(retval!=NULL))
         *retval=pri;
-      /* store complete status (stk, hea and cip are already set
-       * at abort_exec)
+      /* store complete status
+       * (stk, frm, hea and cip are already set at abort_exec)
        */
-      amx->frm=frm;
       amx->pri=pri;
       amx->alt=alt;
       if (num==AMX_ERR_SLEEP) {
+        AMXEXEC_COLD_CODE();
         amx->stk=stk;
         amx->hea=hea;
         amx->reset_stk=reset_stk;
@@ -1424,7 +1424,7 @@ int AMXAPI amx_Exec(AMX *amx, cell *retval, int index)
 
     OPHND_CASE(OP_SYSREQ_PRI):
       /* save a few registers */
-      amx->cip=(cell)((size_t)cip-(size_t)code);
+      amx->cip=(cell)((size_t)cip-(size_t)code-sizeof(cell));
       amx->hea=hea;
       amx->frm=frm;
       amx->stk=stk;
@@ -1450,7 +1450,7 @@ int AMXAPI amx_Exec(AMX *amx, cell *retval, int index)
 
     OPHND_CASE(OP_SYSREQ_C):
       /* save a few registers */
-      amx->cip=(cell)((size_t)cip-(size_t)code);
+      amx->cip=(cell)((size_t)cip-(size_t)code-sizeof(cell));
       amx->hea=hea;
       amx->frm=frm;
       amx->stk=stk;
@@ -1555,7 +1555,7 @@ int AMXAPI amx_Exec(AMX *amx, cell *retval, int index)
       offs=GETPARAM(2);
       PUSH(offs);
       /* save a few registers */
-      amx->cip=(cell)((size_t)cip-(size_t)code);
+      amx->cip=(cell)((size_t)cip-(size_t)code-sizeof(cell));
       amx->hea=hea;
       amx->frm=frm;
       amx->stk=stk;
@@ -1573,13 +1573,13 @@ int AMXAPI amx_Exec(AMX *amx, cell *retval, int index)
 
     OPHND_CASE(OP_BREAK):
       assert((amx->flags & AMX_FLAG_BROWSE)==0);
-      /**/amx->cip = (cell)((size_t)cip - (size_t)code);
       if (AMX_UNLIKELY(amx->debug!=NULL)) {
+        AMXEXEC_COLD_CODE();
         /* store status */
         amx->frm=frm;
         amx->stk=stk;
         amx->hea=hea;
-        amx->cip=(cell)((size_t)cip-(size_t)code);
+        amx->cip=(cell)((size_t)cip-(size_t)code-sizeof(cell));
         num=amx->debug(amx);
         if (AMX_UNLIKELY(num!=AMX_ERR_NONE)) {
           if (num==AMX_ERR_SLEEP) {
@@ -1818,13 +1818,14 @@ int AMXAPI amx_Exec(AMX *amx, cell *retval, int index)
       ERR_INVINSTR();
     #else
       /* save a few registers */
-      amx->cip=(cell)((size_t)cip-(size_t)code);
+      amx->cip=(cell)((size_t)cip-(size_t)code-sizeof(cell));
       amx->hea=hea;
       amx->frm=frm;
       amx->stk=stk;
       pri=((AMX_NATIVE)(size_t)GETPARAM(1))(amx,(cell *)(void *)(data+(size_t)stk));
       if (AMX_UNLIKELY(amx->error!=AMX_ERR_NONE)) {
       sysreq_d_err:
+        AMXEXEC_COLD_CODE();
         num=amx->error;
         goto sysreq_err;
       }
@@ -1840,7 +1841,7 @@ int AMXAPI amx_Exec(AMX *amx, cell *retval, int index)
         offs=GETPARAM(2);
         PUSH(offs);
         /* save a few registers */
-        amx->cip=(cell)((size_t)cip-(size_t)code);
+        amx->cip=(cell)((size_t)cip-(size_t)code-sizeof(cell));
         amx->hea=hea;
         amx->frm=frm;
         amx->stk=stk;
@@ -1880,9 +1881,10 @@ err_invinstr:
 #endif
 
 abort_exec:
-  amx->stk = reset_stk;
-  amx->hea = reset_hea;
-  amx->cip = (cell)((size_t)cip - (size_t)code - sizeof(cell));
+  amx->stk=reset_stk;
+  amx->hea=reset_hea;
+  amx->frm=frm;
+  amx->cip=(cell)((size_t)cip-(size_t)code-sizeof(cell));
   return num;
 
 #endif /* defined ASM32 || defined JIT */
