@@ -677,7 +677,7 @@ int VerifyRelocateBytecode(AMX *amx)
     if (num_args==-1) {
       amx->cip=(cell)((size_t)vdata.cip-(size_t)vdata.code);
       amx->flags &= ~AMX_FLAG_BROWSE;
-      return amx->error;
+      return (amx->error=AMX_ERR_INVINSTR);
     }
 #if defined AMX_EXEC_USE_JUMP_TABLE && !defined AMX_DONT_RELOCATE
     /* Replace the operation code by a jump address
