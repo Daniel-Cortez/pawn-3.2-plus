@@ -7,6 +7,13 @@
   #define HAVE_SAFESTR
 #endif
 
+#if defined strlcpy
+  #define HAVE_STRLCPY
+#endif
+#if defined strlcat
+  #define HAVE_STRLCAT
+#endif
+
 #if defined HAVE_SAFESTR
   #define HAVE_STRLCPY
   #define HAVE_STRLCAT
