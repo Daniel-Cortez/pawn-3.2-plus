@@ -4,37 +4,82 @@ This is a modified version of the Pawn 3.2 toolkit by ITB CompuPhase.
 
 The main goal of this project is to provide an improved version of Pawn 3.2 with changes made to both the compiler and runtime components.
 
-The codebase is based off of the [Zeex's fork of Pawn 3.2](https://github.com/Zeex/pawn) (also known as Pawn 3.10) which is aimed at fixing and adding new features to the compiler for [SA-MP](http://sa-mp.com/).
-This project, on the other hand, is focused on improvement of the runtime - some of the changes are backported from Pawn 3.3 (like the addition of `frename()`, `fstat()`, `strcopy()` etc.) and the others are completely new (such as bytecode verification and a new interpreter core).
+The codebase is based off the [Zeex's fork of Pawn 3.2](https://github.com/pawn-lang/compiler) (also known as Pawn 3.10) which is aimed at fixing bugs and adding new features to the compiler for [SA-MP](http://sa-mp.com/).
+This project, on the other hand, is focused on improvement of the runtime - some of the changes are backported from Pawn 3.3 (like the addition of <code>frename()</code>, <code>fstat()</code>, <code>strcopy()</code> etc.) and the others are completely new (such as bytecode verification and a new interpreter core).
 
 
 ## Changes:
-  * Backported non-breaking changes from Pawn 3.3 and pre-release versions up to 4.0.
-    <br/>Notable changes include the addition of new native functions in modules amxFile (`frename`, `fstat`, `fattrib` and `filecrc`), amxTime (`settimestamp` and `cvttimestamp`) and amxString (`strcopy`).
-    There are also fixes for already existing functions such as `valstr` (fixed hangup on large numbers) and `printf` (fixed handling of "%%").
-    Backporting from 4.0 doesn't seem to be possible due to a different license (Apache 2.0).
+<ul>
+<li>Backported non-breaking changes from Pawn 3.3 and pre-release versions up to 4.0.
+<br/>Notable changes include the addition of new native functions in the following modules:
+<ul>
+<li>amxFile
 
-  * Added custom CMake project file to the repository root directory for building both the compiler and the runtime.
-    <br/>Also changed the project file in the "source/amx" directory, added options for compiling with 32/64-bit cell size, building the extension modules as static libraries (might be useful to link them into the host app), and for inclusion/exclusion of particular modules from the build.
+```Pawn
+native bool: frename(const oldname[], const newname[]);
+native bool: fstat(name[], &size = 0, &timestamp = 0, &mode = 0, &inode = 0);
+native bool: fattrib(const name[], timestamp=0, attrib=0x0f);
+native       filecrc(const name[]);
+```
+</li>
 
-  * Added custom interpreter core (`amx_Exec`) which merges two standard cores (the GCC-specific one and the ANSI C one) into one codebase.
-    <br/>The new core has additional runtime checks that fix various bugs and vulnerabilities in the interpreter's code.
-    <br/>For example, in the original Pawn 3.2 most of the memory (stack/heap and data sections) access instructions don't have any address checks, which allows to read/write data outside of the script memory.
-    <br/>There are also no checks for stack overflow/underflow in any of the stack operations (other than the `STACK` opcode), so it's possible to use `SCTRL 4` to make `CIP` point outside of the script memory and then read/write data from there with `PUSH*`/`POP*` instructions.
-    <br/>These two and a few other kinds of vulnerabilities are fixed in the new core.
-    The old cores can still be used by disabling the PAWN_USE_NEW_AMXEXEC option in the CMake project.
+<li>amxString
 
-    Despite the extra runtime checks, the new core doesn't have any problems with performance. Moreover, it has even better performance than in the old cores (tested on machines with the x86 family processors; on ARMv8 the difference is not really noticeable).
-    The performance increase became possible by the use of static branch prediction (see macros `AMX_LIKELY` and `AMX_UNLIKELY` in amx_internal.h) and various other code optimization techniques.
-    You can test it yourself by building two different versions of the VM, with PAWN_USE_NEW_AMXEXEC enabled/disabled, and then compiling script "fib_bench.p" (located in the "examples" directory) and running it on each of them.
+```Pawn
+native strcopy(dest[], const source[], maxlength=sizeof dest);
+```
+</li>
 
-  * Added bytecode verification at script loading (in amx_Init).
-    <br/>This includes address checks for branch/memory access instructions and opcode-specific checks (e.g. function ID check for the 1'st argument of SYSREQ.c and SYSREQ.n).
+<li>amxTime
 
-  * Removed the dependency of the cell size from a pointer size.
-    <br/>Now it's possible to use the runtime with 32-bit cell size on 64-bit processors.
-    In the original version of Pawn 3.2 doing so wasn't a good idea since the physical addresses of native functions and AMX extension modules were stored in Pawn cells and the cell size could not be enough to fit a pointer.
+```Pawn
+native cvttimestamp(seconds1970, &year=0, &month=0, &day=0, &hour=0, &minute=0, &second=0);
+```
+</li>
+</ul>
+There are also fixes for already existing functions such as:
+<ul>
+<li>valstr
+<br/>Fixed hangup on large numbers.
+</li>
 
-  * Implemented relocation of data addresses in data access instructions.
-    <br/>In the original Pawn 3.2 code the jump addresses in branch instructions (`CALL`, `JUMP`, `JZER`, `JNZ`, `JEQ` etc.) are replaced by the corresponding physical addresses on script load, so why not do the same thing to speed up access to the data section?
-    <br/>This feature is only supported for the new interpreter core (see above).
+<li>strcmp
+<br/>Fixed incorrect return values when either one of the strings is empty or if one string partially matches the other one.
+</li>
+
+<li>printf
+<br/>Fixed handling of "%%".
+</li>
+</ul>
+Backporting from 4.0 doesn't seem to be possible due to a different license (Apache 2.0).
+</li>
+
+<li>Added custom CMake project file to the repository root directory for building both the compiler and the runtime.
+<br/>Also changed the project file in the "source/amx" directory, added options for compiling with 32/64-bit cell size, building the extension modules as static libraries (might be useful to link them into the host app), and for inclusion/exclusion of particular modules from the build.
+</li>
+
+<li>Added custom interpreter core (<code>amx_Exec</code>) which merges two standard cores (the GCC-specific one and the ANSI C one) into one codebase.
+<br/>The new core has additional runtime checks that fix various bugs and vulnerabilities in the interpreter.
+<br/>For example, in the original Pawn 3.2 most of the memory (stack/heap and data sections) access instructions don't have any address checks, which allows to read/write data outside of the script memory.
+<br/>There are also no checks for stack overflow/underflow in any of the stack operations (other than the <code>STACK</code> opcode), so it's possible to use <code>SCTRL 4</code> to make <code>CIP</code> point outside of the script memory and then read/write data from there with <code>PUSH*</code>/<code>POP*</code> instructions.
+<br/>These two and a few other kinds of vulnerabilities are fixed in the new core.
+The old cores can still be used by disabling the <code>PAWN_USE_NEW_AMXEXEC</code> option in the CMake project.
+
+There is a potential for performance decrease due to extra runtime checks, but it's well compensated by the use of static branch prediction (see macros <code>AMX_LIKELY</code> and <code>AMX_UNLIKELY</code> in amx_internal.h) and various other code optimisation techniques.
+You can compare the perfornmance of the new VM and the old ones by building them with <code>PAWN_USE_NEW_AMXEXEC</code> enabled/disabled, and then compiling script "fib_bench.p" (located in the "examples" directory) and running it on each of the VMs.
+</li>
+
+<li>Added bytecode verification at script loading (in <code>amx_Init</code>).
+<br/>This includes address checks for branch/memory access instructions and opcode-specific checks (e.g. function ID check for the 1'st argument of SYSREQ.c and SYSREQ.n).
+</li>
+
+<li>Removed the dependency of the cell size from the pointer size.
+<br/>Now it's possible to use the runtime with 32-bit cell size on 64-bit processors.
+In the original version of Pawn 3.2 doing so wasn't a good idea since the physical addresses of native functions and AMX extension modules were stored in Pawn cells and the cell size could not be enough to fit a pointer.
+</li>
+
+<li>Implemented relocation of data addresses in data access instructions.
+<br/>In the original Pawn 3.2 code the jump addresses in branch instructions (<code>CALL</code>, <code>JUMP</code>, <code>JZER</code>, <code>JNZ</code>, <code>JEQ</code> etc.) are replaced by the corresponding physical addresses on script load, so why not do the same thing to speed up access to the data section?
+<br/>This feature is only supported for the new interpreter core (see above).
+</li>
+</ul>
