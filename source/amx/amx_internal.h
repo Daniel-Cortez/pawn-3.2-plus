@@ -1,7 +1,7 @@
 /*  Pawn Abstract Machine (for the Pawn language)
  *  Declarations and definitions for internal use in the Abstract Machine.
  *
- *  Portions copyright (c) Stanislav Gromov, 2016-2017
+ *  Portions copyright (c) Stanislav Gromov, 2016-2018
  *
  *  This code was derived from code carrying the following copyright notice:
  *
