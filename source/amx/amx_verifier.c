@@ -352,8 +352,9 @@ static int VHANDLER_CALL v_stack_heap(VERIFICATION_DATA *vdata)
 
 static int VHANDLER_CALL v_jrel(VERIFICATION_DATA *vdata)
 {
-  const cell arg=(cell)((size_t)(vdata->cip)-(size_t)(vdata->code))+*PARAMADDR(vdata->cip, 1);
-  if (IS_INVALID_CODE_OFFS_NORELOC(arg, vdata->codesize)) {
+  const cell cip=(cell)((size_t)(vdata->cip)-(size_t)(vdata->code));
+  const cell tgt=cip+*PARAMADDR(vdata->cip,1)+(cell)sizeof(cell);
+  if (IS_INVALID_CODE_OFFS_NORELOC(tgt,vdata->codesize)) {
     vdata->err=AMX_ERR_BOUNDS;
     return -1;
   }
