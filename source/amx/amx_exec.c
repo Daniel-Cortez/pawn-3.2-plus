@@ -158,9 +158,9 @@
 #endif
 
 #if defined __GNUC__
-  #define AMXEXEC_COLD_CODE()   __attribute__((cold, unused))
+  #define AMXEXEC_COLD_CODE(x)  lbl_cold_##x: __attribute__((cold, unused))
 #else
-  #define AMXEXEC_COLD_CODE()   (void)0
+  #define AMXEXEC_COLD_CODE(x)  (void)0
 #endif
 
 #ifndef NDEBUG
@@ -1406,7 +1406,7 @@ int AMXAPI amx_Exec(AMX *amx, cell *retval, int index)
       amx->pri=pri;
       amx->alt=alt;
       if (num==AMX_ERR_SLEEP) {
-        AMXEXEC_COLD_CODE();
+        AMXEXEC_COLD_CODE(op_halt_sleep);
         amx->stk=stk;
         amx->hea=hea;
         amx->reset_stk=reset_stk;
@@ -1436,7 +1436,7 @@ int AMXAPI amx_Exec(AMX *amx, cell *retval, int index)
       #endif
       if (AMX_UNLIKELY(num!=AMX_ERR_NONE)) {
       sysreq_err:
-        AMXEXEC_COLD_CODE();
+        AMXEXEC_COLD_CODE(op_sysreq_err);
         if (num==AMX_ERR_SLEEP) {
           amx->pri=pri;
           amx->alt=alt;
@@ -1574,7 +1574,7 @@ int AMXAPI amx_Exec(AMX *amx, cell *retval, int index)
     OPHND_CASE(OP_BREAK):
       assert((amx->flags & AMX_FLAG_BROWSE)==0);
       if (AMX_UNLIKELY(amx->debug!=NULL)) {
-        AMXEXEC_COLD_CODE();
+        AMXEXEC_COLD_CODE(op_break_debug);
         /* store status */
         amx->frm=frm;
         amx->stk=stk;
@@ -1825,7 +1825,7 @@ int AMXAPI amx_Exec(AMX *amx, cell *retval, int index)
       pri=((AMX_NATIVE)(size_t)GETPARAM(1))(amx,(cell *)(void *)(data+(size_t)stk));
       if (AMX_UNLIKELY(amx->error!=AMX_ERR_NONE)) {
       sysreq_d_err:
-        AMXEXEC_COLD_CODE();
+        AMXEXEC_COLD_CODE(sysreq_d_err);
         num=amx->error;
         goto sysreq_err;
       }
@@ -1858,25 +1858,25 @@ int AMXAPI amx_Exec(AMX *amx, cell *retval, int index)
 
 #if !(defined _MSC_VER && _MSC_VER>=1800)
 err_stackerr:
-  AMXEXEC_COLD_CODE();
+  AMXEXEC_COLD_CODE(err_stackerr);
   ABORT(AMX_ERR_STACKERR);
 err_bounds:
-  AMXEXEC_COLD_CODE();
+  AMXEXEC_COLD_CODE(err_bounds);
   ABORT(AMX_ERR_BOUNDS);
 err_memaccess:
-  AMXEXEC_COLD_CODE();
+  AMXEXEC_COLD_CODE(err_memaccess);
   ABORT(AMX_ERR_MEMACCESS);
 err_stacklow:
-  AMXEXEC_COLD_CODE();
+  AMXEXEC_COLD_CODE(err_stacklow);
   ABORT(AMX_ERR_STACKLOW);
 err_heaplow:
-  AMXEXEC_COLD_CODE();
+  AMXEXEC_COLD_CODE(err_heaplow);
   ABORT(AMX_ERR_HEAPLOW);
 err_divide:
-  AMXEXEC_COLD_CODE();
+  AMXEXEC_COLD_CODE(err_divide);
   ABORT(AMX_ERR_DIVIDE);
 err_invinstr:
-  AMXEXEC_COLD_CODE();
+  AMXEXEC_COLD_CODE(err_invinstr);
   ABORT(AMX_ERR_INVINSTR);
 #endif
 
