@@ -41,14 +41,27 @@
 #else
   #include <sys/utime.h>
 #endif
-#include "amx.h"
 #if defined __WIN32__ || defined _WIN32 || defined WIN32 || defined __MSDOS__
   #include <malloc.h>
 #endif
+#include "amx.h"
 #if defined LINUX || defined __FreeBSD__ || defined __OpenBSD__ || defined MACOS
   #include <dirent.h>
 #else
   #include <io.h>
+#endif
+#if (defined HAVE_UNISTD_H || defined HAVE_SYS_UNISTD_H) \
+ && (defined HAVE_FCNTL_H || defined HAVE_FCNTL_H)
+  #if defined HAVE_UNISTD_H
+    #include <unistd.h>
+  #else
+    #include <sys/unistd.h>
+    #define HAVE_UNISTD_H
+  #endif
+  #include <fcntl.h>
+  #if defined HAVE_SYS_SENDFILE_H
+    #include <sys/sendfile.h>
+  #endif
 #endif
 #if defined __WIN32__ || defined _WIN32 || defined WIN32 || defined _Windows
   #include <windows.h>
@@ -320,26 +333,6 @@ static size_t fgets_char(FILE *fp, char *string, size_t max)
 
   return index;
 }
-
-#if defined __WIN32__ || defined _WIN32 || defined WIN32
-#if defined _UNICODE
-wchar_t *_wgetenv(wchar_t *name)
-{
-static wchar_t buffer[_MAX_PATH];
-  buffer[0]=L'\0';
-  GetEnvironmentVariable(name,buffer,sizearray(buffer));
-  return buffer[0]!=L'\0' ? buffer : NULL;
-}
-#else
-char *getenv(const char *name)
-{
-static char buffer[_MAX_PATH];
-  buffer[0]='\0';
-  GetEnvironmentVariable(name,buffer,sizearray(buffer));
-  return buffer[0]!='\0' ? buffer : NULL;
-}
-#endif
-#endif
 
 static char *completename(TCHAR *dest, TCHAR *src, size_t size)
 {
@@ -687,6 +680,77 @@ static cell AMX_NATIVE_CALL n_frename(AMX *amx, const cell *params)
   return r==0;
 }
 
+/* bool: fcopy(const source[], const target[]) */
+static cell AMX_NATIVE_CALL n_fcopy(AMX *amx, const cell *params)
+{
+  TCHAR *name,source[_MAX_PATH],target[_MAX_PATH];
+
+  amx_StrParam(amx,params[1],name);
+  if (name!=NULL && completename(source,name,sizearray(source))!=NULL) {
+    amx_StrParam(amx,params[2],name);
+    if (name!=NULL && completename(target,name,sizearray(target))!=NULL) {
+      #if defined __WIN32__ || defined _WIN32 || defined WIN32 || defined _Windows
+        return (CopyFile(source,target,FALSE)==FALSE) ? 1 : 0;
+      #elif defined HAVE_UNISTD_H || defined HAVE_SYS_UNISTD_H /* POSIX way */
+        cell result=0;
+        int fsrc=0,ftgt=0;
+        ssize_t numbytes;
+        if ((fsrc=open(source,O_RDONLY,0))==-1)
+          goto ret;
+        if ((ftgt=open(target,(O_WRONLY | O_CREAT | O_TRUNC),(S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH)))==-1)
+          goto ret;
+        #if defined HAVE_SYS_SENDFILE_H
+        do {
+          struct stat stbuf;
+          _tstat(source,&stbuf);
+          numbytes=sendfile(ftgt,fsrc,NULL,stbuf.st_size);
+          if (numbytes!=-1) {
+            result=1;
+            goto ret;
+          } /* if */
+        } while (0);
+        /* fallback to read()/write() */
+        #endif
+        do {
+          char buf[BUFSIZ];
+          while ((numbytes=read(fsrc,buf,sizeof(buf)))>0)
+            if (write(ftgt,buf,(size_t)numbytes)!=numbytes)
+              goto ret;
+        } while (0);
+        if (numbytes==-1)
+          goto ret;
+        result=1;
+      ret:
+        if (fsrc!=0)
+          close(fsrc);
+        if (ftgt!=0)
+          close(ftgt);
+        return result;
+      #else /* Plain ANSI C way */
+        cell result=0;
+        FILE *fsrc,*ftgt;
+        char buf[BUFSIZ];
+        size_t numbytes;
+        if ((fsrc=fopen(source,"rb"))==NULL)
+          goto ret;
+        if ((ftgt=fopen(target,"wb"))==NULL)
+          goto ret;
+        while ((numbytes=fread(buf,1,sizeof(buf),fsrc))!=0)
+          if (fwrite(buf,1,numbytes,ftgt)!=numbytes)
+            goto ret;
+        result=1;
+      ret:
+        if (fsrc!=NULL)
+          fclose(fsrc);
+        if (ftgt!=NULL)
+          fclose(ftgt);
+        return result;
+      #endif
+    } /* if */
+  } /* if */
+  return 0;
+}
+
 /* flength(File: handle) */
 static cell AMX_NATIVE_CALL n_flength(AMX *amx, const cell *params)
 {
@@ -749,7 +813,7 @@ static int matchfiles(const TCHAR *path,int skip,TCHAR *out,int outlen)
       strcpy(dirname,".");
     } else {
       strncpy(dirname,path,(int)(basename-path));
-      dirname[(int)(basename-path)]=_T('\0');
+      dirname[(int)(basename-path)]=__T('\0');
     } /* if */
     if ((dir=opendir(dirname))!=NULL) {
       while ((entry=readdir(dir))!=NULL) {
@@ -965,6 +1029,7 @@ AMX_NATIVE_INFO file_Natives[] = {
   { "flength",     n_flength },
   { "fremove",     n_fremove },
   { "frename",     n_frename },
+  { "fcopy",       n_fcopy },
   { "fexist",      n_fexist },
   { "fmatch",      n_fmatch },
   { "fstat",       n_fstat },
