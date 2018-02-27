@@ -102,6 +102,7 @@ native Float:operator/(Float:oper1, Float:oper2) = floatdiv;
 native Float:operator+(Float:oper1, Float:oper2) = floatadd;
 native Float:operator-(Float:oper1, Float:oper2) = floatsub;
 native Float:operator=(oper) = float;
+native operator=(Float:oper) = floatint;
 
 stock Float:operator++(Float:oper)
     return oper+1.0;
