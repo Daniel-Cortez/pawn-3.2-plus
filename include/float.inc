@@ -20,16 +20,20 @@ enum floatround_method {
   floatround_ceil,
   floatround_tozero,
   floatround_unbiased
-}
+};
 enum anglemode {
   radian,
   degrees,
   grades
-}
+};
 
 /**************************************************/
 /* Convert an integer into a floating point value */
 native Float:float(value);
+
+/**************************************************/
+/* Convert a floating point value into an integer */
+native Float:floatint(Float:value);
 
 /**************************************************/
 /* Convert a string into a floating point value */
@@ -98,6 +102,7 @@ native Float:operator/(Float:oper1, Float:oper2) = floatdiv;
 native Float:operator+(Float:oper1, Float:oper2) = floatadd;
 native Float:operator-(Float:oper1, Float:oper2) = floatsub;
 native Float:operator=(oper) = float;
+native operator=(Float:oper) = floatint;
 
 stock Float:operator++(Float:oper)
     return oper+1.0;
