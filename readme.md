@@ -51,7 +51,6 @@ There are also fixes for already existing functions such as:
 <br/>Fixed handling of "%%".
 </li>
 </ul>
-Backporting from 4.0 doesn't seem to be possible due to a different license (Apache 2.0).
 </li>
 
 <li>Added custom CMake project file to the repository root directory for building both the compiler and the runtime.
