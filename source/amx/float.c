@@ -39,6 +39,19 @@
 
 #define PI  3.1415926535897932384626433832795
 
+enum floatround_method {
+  floatround_round,
+  floatround_floor,
+  floatround_ceil,
+  floatround_tozero,
+  floatround_unbiased
+};
+enum anglemode {
+  radian,
+  degrees,
+  grades
+};
+
 /******************************************************************/
 static cell AMX_NATIVE_CALL n_float(AMX *amx,const cell *params)
 {
@@ -182,15 +195,15 @@ static cell AMX_NATIVE_CALL n_floatround(AMX *amx,const cell *params)
     REAL fA = amx_ctof(params[1]);
 
     (void)amx;
-    switch (params[2])
+    switch ((int)params[2])
     {
-        case 1:       /* round downwards */
+        case floatround_floor:  /* round downwards */
             fA = (REAL)(floor((double)fA));
             break;
-        case 2:       /* round upwards */
+        case floatround_ceil:   /* round upwards */
             fA = (REAL)(ceil((double)fA));
             break;
-        case 3:       /* round towards zero (truncate) */
+        case floatround_tozero: /* round towards zero (truncate) */
             if ( fA>=0.0 )
                 fA = (REAL)(floor((double)fA));
             else
@@ -199,7 +212,7 @@ static cell AMX_NATIVE_CALL n_floatround(AMX *amx,const cell *params)
         default:      /* standard, round to nearest */
             fA = (REAL)(floor((double)fA+.5));
             break;
-    }
+    } /* switch */
 
     return (cell)fA;
 }
@@ -275,15 +288,15 @@ static cell AMX_NATIVE_CALL n_floatlog(AMX *amx,const cell *params)
     return amx_ftoc(fValue);
 }
 
-static REAL ToRadians(REAL angle, int radix)
+static REAL ToRadians(REAL angle, cell radix)
 {
-    switch (radix)
+    switch ((int)radix)
     {
-        case 1:         /* degrees, sexagesimal system (technically: degrees/minutes/seconds) */
+        case degrees: /* degrees, sexagesimal system (technically: degrees/minutes/seconds) */
             return (REAL)(angle * PI / 180.0);
-        case 2:         /* grades, centesimal system */
+        case grades:  /* grades, centesimal system */
             return (REAL)(angle * PI / 200.0);
-        default:        /* assume already radian */
+        default:                /* assume already radian */
             return angle;
     } /* switch */
 }
