@@ -39,9 +39,14 @@ set(REQUIRED_INCLUDE_FILES
   "alloca.h"
   "tchar.h"
   "utime.h"
+  "unistd.h"
+  "sys/unistd.h"
+  "fcntl.h"
+  "sys/fcntl.h"
+  "sys/sendfile.h"
 )
 foreach(INCLUDE_FILE ${REQUIRED_INCLUDE_FILES})
-  string(REPLACE "." "_" DEFINITION_NAME "HAVE_${INCLUDE_FILE}")
+  string(REGEX REPLACE "\\.|/" "_" DEFINITION_NAME "HAVE_${INCLUDE_FILE}")
   string(TOUPPER ${DEFINITION_NAME} DEFINITION_NAME)
   check_include_file("${INCLUDE_FILE}" ${DEFINITION_NAME})
   if(${DEFINITION_NAME})

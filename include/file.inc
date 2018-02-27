@@ -31,6 +31,7 @@ native bool: fclose(File: handle);
 native File: ftemp();
 native bool: fremove(const name[]);
 native bool: frename(const oldname[], const newname[]);
+native bool: fcopy(const source[], const target[]);
 
 native       fwrite(File: handle, const string[]);
 native       fread(File: handle, string[], size = sizeof string, bool: pack = false);
