@@ -51,6 +51,9 @@
 #else
   #include <io.h>
 #endif
+#if defined __WIN32__ || defined _WIN32 || defined WIN32 || defined __MSDOS__
+  #include <direct.h>
+#endif
 #if (defined HAVE_UNISTD_H || defined HAVE_SYS_UNISTD_H) \
  && (defined HAVE_FCNTL_H || defined HAVE_FCNTL_H)
   #if defined HAVE_UNISTD_H
@@ -93,6 +96,7 @@
 # define _tgetenv       getenv
 # define _tremove       remove
 # define _trename       rename
+# define _tmkdir        _mkdir
 # define _tstat         _stat
 # define _tutime        _utime
 #endif
@@ -752,6 +756,21 @@ static cell AMX_NATIVE_CALL n_fcopy(AMX *amx, const cell *params)
   return 0;
 }
 
+/* bool: fcreatedir(const name[]); */
+static cell AMX_NATIVE_CALL n_fcreatedir(AMX *amx, const cell *params)
+{
+  TCHAR *name,fname[_MAX_PATH];
+
+  amx_StrParam(amx,params[1],name);
+  if (name==NULL || completename(fname,name,sizearray(fname))==NULL)
+    return 0;
+  #if defined _Windows || defined __MSDOS__
+    return (_tmkdir(fname)==0) ? 1 : 0;
+  #else
+    return (mkdir(fname,(S_IRWXU | S_IRGRP | S_IXGRP | S_IROTH | S_IXOTH))==0) ? 1 : 0;
+  #endif
+}
+
 /* flength(File: handle) */
 static cell AMX_NATIVE_CALL n_flength(AMX *amx, const cell *params)
 {
@@ -1031,6 +1050,7 @@ AMX_NATIVE_INFO file_Natives[] = {
   { "fremove",     n_fremove },
   { "frename",     n_frename },
   { "fcopy",       n_fcopy },
+  { "fcreatedir",  n_fcreatedir },
   { "fexist",      n_fexist },
   { "fmatch",      n_fmatch },
   { "fstat",       n_fstat },
