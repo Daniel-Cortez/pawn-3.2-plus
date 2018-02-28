@@ -20,6 +20,16 @@ native bool: frename(const oldname[], const newname[]);
 native bool: fstat(name[], &size = 0, &timestamp = 0, &mode = 0, &inode = 0);
 native bool: fattrib(const name[], timestamp=0, attrib=0x0f);
 native       filecrc(const name[]);
+native bool: fcopy(const source[], const target[]);
+native bool: fcreatedir(const name[]);
+```
+</li>
+
+<li>amxFloat
+
+```Pawn
+native Float:floatint(Float:value);
+native operator=(Float:oper) = floatint;
 ```
 </li>
 
