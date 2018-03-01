@@ -559,19 +559,18 @@ static cell AMX_NATIVE_CALL n_fread(AMX *amx, const cell *params)
 /* fputchar(File: handle, value, bool:utf8 = true) */
 static cell AMX_NATIVE_CALL n_fputchar(AMX *amx, const cell *params)
 {
-  size_t result;
-
   UNUSED_PARAM(amx);
   if (params[3]) {
+    size_t result;
     cell str[2];
     str[0]=params[2];
     str[1]=0;
-    result=fputs_cell((FILE*)params[1],str,1);
-  } else {
-    fputc((int)params[2],(FILE*)params[1]);
+    result=(cell)fputs_cell((FILE*)params[1],str,1);
+    assert(result==0 || result==1);
+    return result;
   } /* if */
-  assert(result==0 || result==1);
-  return result;
+  fputc((int)params[2],(FILE*)params[1]);
+  return 1;
 }
 
 /* fgetchar(File: handle, bool:utf8 = true) */
