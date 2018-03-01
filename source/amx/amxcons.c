@@ -80,6 +80,10 @@
 #endif
 #include "amxcons.h"
 
+#if defined __clang__
+  #pragma clang diagnostic ignored "-Wlogical-op-parentheses"
+#endif
+
 #if defined __MSDOS__
   #define EOL_CHAR       '\r'
 #endif

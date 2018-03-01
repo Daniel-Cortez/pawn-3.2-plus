@@ -54,6 +54,10 @@
 # define _tcslen        strlen
 #endif
 
+#if defined __clang__
+  #pragma clang diagnostic ignored "-Wlogical-op-parentheses"
+#endif
+
 
 #define CHARBITS        (8*sizeof(char))
 typedef unsigned char   uchar;

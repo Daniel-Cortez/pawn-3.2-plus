@@ -123,6 +123,11 @@
   #define UNUSED_PARAM(p) ((void)(p))
 #endif
 
+#if defined __clang__
+  #pragma clang diagnostic ignored "-Wbitwise-op-parentheses"
+  #pragma clang diagnostic ignored "-Wlogical-op-parentheses"
+#endif
+
 enum filemode {
   io_read,      /* file must exist */
   io_write,     /* creates a new file */
