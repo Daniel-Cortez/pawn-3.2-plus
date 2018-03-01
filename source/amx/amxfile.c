@@ -55,14 +55,19 @@
   #include <direct.h>
 #endif
 #if (defined HAVE_UNISTD_H || defined HAVE_SYS_UNISTD_H) \
- && (defined HAVE_FCNTL_H || defined HAVE_FCNTL_H)
+&&  (defined HAVE_FCNTL_H || defined HAVE_SYS_FCNTL_H)
   #if defined HAVE_UNISTD_H
     #include <unistd.h>
   #else
     #include <sys/unistd.h>
     #define HAVE_UNISTD_H
   #endif
-  #include <fcntl.h>
+  #if defined HAVE_FCNTL_H
+    #include <fcntl.h>
+  #else
+    #include <sys/fcntl.h>
+    #define HAVE_FCNTL_H
+  #endif
   #if defined HAVE_SYS_SENDFILE_H
     #include <sys/sendfile.h>
   #endif
@@ -96,7 +101,13 @@
 # define _tgetenv       getenv
 # define _tremove       remove
 # define _trename       rename
-# define _tmkdir        _mkdir
+# if defined _Windows || defined __MSDOS__
+#   define _tmkdir      _mkdir
+#   define _trmdir      _rmdir
+# else
+#   define _tmkdir      mkdir
+#   define _trmdir      rmdir
+# endif
 # define _tstat         _stat
 # define _tutime        _utime
 #endif
@@ -661,13 +672,15 @@ static cell AMX_NATIVE_CALL n_fseek(AMX *amx, const cell *params)
 /* bool: fremove(const name[]) */
 static cell AMX_NATIVE_CALL n_fremove(AMX *amx, const cell *params)
 {
-  int r=1;
   TCHAR *name,fullname[_MAX_PATH];
 
   amx_StrParam(amx,params[1],name);
-  if (name!=NULL && completename(fullname,name,sizearray(fullname))!=NULL)
-    r=_tremove(fullname);
-  return r==0;
+  if (name!=NULL && completename(fullname,name,sizearray(fullname))!=NULL) {
+    struct stat stbuf;
+    if (_tstat(fullname,&stbuf)==0)
+      return ((((stbuf.st_mode & S_IFDIR)!=0) ? _trmdir(fullname) : _tremove(fullname))==0) ? 1 : 0;
+  } /* if */
+  return 0;
 }
 
 /* bool: frename(const oldname[], const newname[]) */
@@ -694,9 +707,9 @@ static cell AMX_NATIVE_CALL n_fcopy(AMX *amx, const cell *params)
   if (name!=NULL && completename(source,name,sizearray(source))!=NULL) {
     amx_StrParam(amx,params[2],name);
     if (name!=NULL && completename(target,name,sizearray(target))!=NULL) {
-      #if defined __WIN32__ || defined _WIN32 || defined WIN32 || defined _Windows
-        return (CopyFile(source,target,FALSE)==FALSE) ? 1 : 0;
-      #elif defined HAVE_UNISTD_H || defined HAVE_SYS_UNISTD_H /* POSIX way */
+      #if defined _Windows
+        return (CopyFile(source,target,FALSE)!=FALSE) ? 1 : 0;
+      #elif defined HAVE_UNISTD_H && defined HAVE_FCNTL_H /* POSIX way */
         cell result=0;
         int fsrc=0,ftgt=0;
         ssize_t numbytes;
@@ -705,16 +718,16 @@ static cell AMX_NATIVE_CALL n_fcopy(AMX *amx, const cell *params)
         if ((ftgt=open(target,(O_WRONLY | O_CREAT | O_TRUNC),(S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH)))==-1)
           goto ret;
         #if defined HAVE_SYS_SENDFILE_H
-        do {
-          struct stat stbuf;
-          _tstat(source,&stbuf);
-          numbytes=sendfile(ftgt,fsrc,NULL,stbuf.st_size);
-          if (numbytes!=-1) {
-            result=1;
-            goto ret;
-          } /* if */
-        } while (0);
-        /* fallback to read()/write() */
+          do {
+            struct stat stbuf;
+            _tstat(source,&stbuf);
+            numbytes=sendfile(ftgt,fsrc,NULL,stbuf.st_size);
+            if (numbytes!=-1) {
+              result=1;
+              goto ret;
+            } /* if */
+          } while (0);
+          /* fallback to read()/write() */
         #endif
         do {
           char buf[BUFSIZ];
@@ -767,7 +780,7 @@ static cell AMX_NATIVE_CALL n_fcreatedir(AMX *amx, const cell *params)
   #if defined _Windows || defined __MSDOS__
     return (_tmkdir(fname)==0) ? 1 : 0;
   #else
-    return (mkdir(fname,(S_IRWXU | S_IRGRP | S_IXGRP | S_IROTH | S_IXOTH))==0) ? 1 : 0;
+    return (_tmkdir(fname,(S_IRWXU | S_IRGRP | S_IXGRP | S_IROTH | S_IXOTH))==0) ? 1 : 0;
   #endif
 }
 
