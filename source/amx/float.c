@@ -250,7 +250,7 @@ static cell AMX_NATIVE_CALL n_floatsqroot(AMX *amx,const cell *params)
     REAL fA = amx_ctof(params[1]);
     fA = (REAL)sqrt(fA);
     if (fA < 0)
-        return amx_RaiseError(amx, AMX_ERR_DOMAIN);
+        return amx_RaiseError(amx, AMX_ERR_DOMAIN), 0;
     return amx_ftoc(fA);
 }
 
@@ -281,7 +281,7 @@ static cell AMX_NATIVE_CALL n_floatlog(AMX *amx,const cell *params)
     REAL fBase = amx_ctof(params[2]);
     (void)amx;
     if (fValue <= 0.0 || fBase <= 0)
-        return amx_RaiseError(amx, AMX_ERR_DOMAIN);
+        return amx_RaiseError(amx, AMX_ERR_DOMAIN),0;
     if (fBase == 10.0) // ??? epsilon
         fValue = (REAL)log10(fValue);
     else
