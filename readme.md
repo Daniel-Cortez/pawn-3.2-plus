@@ -56,6 +56,15 @@ There are also fixes for already existing functions such as:
 <br/>Fixed incorrect return values when either one of the strings is empty or if one string partially matches the other one.
 </li>
 
+<li>strins
+<br/>Fixed the function being prone to a buffer overrun (it didn't take the `maxlength` argument into account).
+<br/>Fixed the resulting string being not terminated by a `'\0'` symbol in certain situations (the function probably relied on the array for the resulting string being initialized by zero values, which isn't quite correct).
+</li>
+
+<li>fputchar
+<br/>Fixed invalid return value when the `utf8` argument is `false`.
+</li>
+
 <li>printf
 <br/>Fixed handling of "%%".
 </li>
