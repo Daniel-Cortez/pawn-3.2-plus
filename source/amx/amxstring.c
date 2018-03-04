@@ -221,12 +221,12 @@ static cell AMX_NATIVE_CALL n_strpack(AMX *amx,const cell *params)
   assert(needed>0);
   lastaddr=(size_t)(params[1]+sizeof(cell)*needed-1);
   if (verify_addr(amx,(cell)lastaddr)!=AMX_ERR_NONE)
-    return amx_RaiseError(amx,AMX_ERR_NATIVE);
+    return amx_RaiseError(amx,AMX_ERR_NATIVE),0;
 
   amx_GetAddr(amx,params[1],&cdest);
   err=amx_StrPack(cdest,csrc,len,0);
   if (err!=AMX_ERR_NONE)
-    return amx_RaiseError(amx,err);
+    return amx_RaiseError(amx,err),0;
 
   return len;
 }
@@ -247,12 +247,12 @@ static cell AMX_NATIVE_CALL n_strunpack(AMX *amx,const cell *params)
     len=params[3]-1;
   lastaddr=(size_t)(params[1]+sizeof(cell)*(len+1)-1);
   if (verify_addr(amx,(cell)lastaddr)!=AMX_ERR_NONE)
-    return amx_RaiseError(amx,AMX_ERR_NATIVE);
+    return amx_RaiseError(amx,AMX_ERR_NATIVE),0;
 
   amx_GetAddr(amx,params[1],&cdest);
   err=amx_StrUnpack(cdest,csrc,len);
   if (err!=AMX_ERR_NONE)
-    return amx_RaiseError(amx,err);
+    return amx_RaiseError(amx,err),0;
 
   return len;
 }
@@ -286,7 +286,7 @@ static cell AMX_NATIVE_CALL n_strcat(AMX *amx,const cell *params)
     lastaddr=(size_t)(params[1]+sizeof(cell)*(len+len2+1)-1);
   } /* if */
   if (verify_addr(amx,(cell)lastaddr)!=AMX_ERR_NONE)
-    return amx_RaiseError(amx,AMX_ERR_NATIVE);
+    return amx_RaiseError(amx,AMX_ERR_NATIVE),0;
 
   if (packed) {
     err=amx_StrPack(cdest,csrc,len,len2);
@@ -296,7 +296,7 @@ static cell AMX_NATIVE_CALL n_strcat(AMX *amx,const cell *params)
     err=amx_StrUnpack(cdest+len2,csrc,len);
   } /* if */
   if (err!=AMX_ERR_NONE)
-    return amx_RaiseError(amx,err);
+    return amx_RaiseError(amx,err),0;
 
   return len;
 }
@@ -328,14 +328,14 @@ static cell AMX_NATIVE_CALL n_strcopy(AMX *amx,const cell *params)
     lastaddr=(size_t)(params[1]+sizeof(cell)*(len+1)-1);
   } /* if */
   if (verify_addr(amx,(cell)lastaddr)!=AMX_ERR_NONE)
-    return amx_RaiseError(amx,AMX_ERR_NATIVE);
+    return amx_RaiseError(amx,AMX_ERR_NATIVE),0;
 
   if (packed)
     err=amx_StrPack(cdest,csrc,len,0);
   else
     err=amx_StrUnpack(cdest,csrc,len);
   if (err!=AMX_ERR_NONE)
-    return amx_RaiseError(amx,err);
+    return amx_RaiseError(amx,err),0;
 
   return len;
 }
@@ -389,7 +389,7 @@ static cell AMX_NATIVE_CALL n_strcmp(AMX *amx,const cell *params)
       return 1;
     if (len1<len2)
       return -1;
-  }
+  } /* if */
   return result;
 }
 
@@ -468,7 +468,7 @@ static cell AMX_NATIVE_CALL n_strmid(AMX *amx,const cell *params)
     lastaddr=(size_t)(params[1]+sizeof(cell)*(len+1)-1);
   } /* if */
   if (verify_addr(amx,(cell)lastaddr)!=AMX_ERR_NONE)
-    return amx_RaiseError(amx,AMX_ERR_NATIVE);
+    return amx_RaiseError(amx,AMX_ERR_NATIVE),0;
 
   if ((ucell)*csrc>UNPACKEDMAX) {
     /* first align the source to a cell boundary */
@@ -490,7 +490,7 @@ static cell AMX_NATIVE_CALL n_strmid(AMX *amx,const cell *params)
     err=amx_StrUnpack(cdest,csrc+start,len);
   } /* if */
   if (err!=AMX_ERR_NONE)
-    return amx_RaiseError(amx,err);
+    return amx_RaiseError(amx,err),0;
 
   return len;
 }
@@ -540,63 +540,49 @@ static cell AMX_NATIVE_CALL n_strdel(AMX *amx,const cell *params)
 static cell AMX_NATIVE_CALL n_strins(AMX *amx,const cell *params)
 {
   cell *cstr,*csub;
-  int index,lenstr,lensub,count;
-  int needed;
-  size_t lastaddr;
-  unsigned char *ptr;
-  cell c;
+  int offset,lenstr,lensub,count,count2,bufsize,newlen,mustpack;
 
   /* calculate number of cells needed for (packed) destination */
   amx_GetAddr(amx,params[1],&cstr);
   amx_GetAddr(amx,params[2],&csub);
   amx_StrLen(cstr,&lenstr);
   amx_StrLen(csub,&lensub);
-  index=(int)params[3];
-  if (index>lenstr)
-    return amx_RaiseError(amx,AMX_ERR_NATIVE);
+  offset=(int)params[3];
+  if (verify_addr(amx,(params[1]+params[4]))!=AMX_ERR_NONE)
+    return amx_RaiseError(amx,AMX_ERR_NATIVE),0;
+  bufsize=(int)params[4];
+  mustpack=((ucell)*cstr>UNPACKEDMAX || (*cstr == (cell)0) && (ucell)*csub>UNPACKEDMAX);
+  if (mustpack)
+    bufsize *= sizeof(cell);
+  if (offset>lenstr || offset>=bufsize)
+    return amx_RaiseError(amx,AMX_ERR_NATIVE),0;
+  newlen=lenstr+lensub;
+  if (newlen>=bufsize)
+    newlen=bufsize-1;
 
-  if (((ucell)*cstr>UNPACKEDMAX)) {
-    needed=(lenstr+lensub+sizeof(cell))/sizeof(cell);   /* # of cells needed */
-    assert(needed>0);
-    lastaddr=(size_t)(params[1]+sizeof(cell)*needed-1);
-  } else {
-    lastaddr=(size_t)(params[1]+sizeof(cell)*(lenstr+lensub+1)-1);
-  } /* if */
-  if (verify_addr(amx,(cell)lastaddr)!=AMX_ERR_NONE)
-    return amx_RaiseError(amx,AMX_ERR_NATIVE);
-
-  if (*cstr==0) {
-    /* current string is empty (and the insertion point is zero), just make a copy */
-    assert(index==0);
-    if ((ucell)*csub>UNPACKEDMAX)
-      amx_StrPack(cstr,csub,lensub,0);
-    else
-      amx_StrUnpack(cstr,csub,lensub);
-    return 1;
-  } /* if */
-
-  if (((ucell)*cstr>UNPACKEDMAX)) {
+  if (mustpack) {
+    unsigned char c;
     /* make room for the new characters */
-    for (count=lenstr+lensub; count>index; count--) {
-      ptr=packedptr(cstr,count-lensub);
-      c=*ptr;
-      ptr=packedptr(cstr,count);
-      *ptr=(unsigned char)c;
+    *(packedptr(cstr,newlen))=(unsigned char)'\0';
+    for (count=newlen-lensub-1,count2=newlen-1; count>=offset; count--,count2--) {
+      c=*(packedptr(cstr,count));
+      *(packedptr(cstr,count2))=c;
     } /* for */
     /* copy in the new characters */
-    for (count=0; count<lensub; count++) {
-      c=extractchar(csub,count,0);
-      ptr=packedptr(cstr,index+count);
-      *ptr=(unsigned char)c;
+    for (count=0,count2=offset; count<lensub && count2<newlen; count++,count2++) {
+      c=(unsigned char)extractchar(csub,count,0);
+      *(packedptr(cstr,count2))=c;
     } /* for */
   } else {
+    cell c;
     /* make room for the new characters */
-    for (count=lenstr+lensub; count>index; count--)
-      cstr[count]=cstr[count-lensub];
+    cstr[newlen]=(cell)'\0';
+    for (count=newlen-lensub-1,count2=newlen-1; count>=offset; count--,count2--)
+      cstr[count2]=cstr[count];
     /* copy in the new characters */
-    for (count=0; count<lensub; count++) {
+    for (count=0,count2=offset; count<lensub && count2<newlen; count++,count2++) {
       c=extractchar(csub,count,0);
-      cstr[index+count]=c;
+      cstr[count2]=c;
     } /* for */
   } /* if */
 
