@@ -57,12 +57,12 @@ There are also fixes for already existing functions such as:
 </li>
 
 <li>strins
-<br/>Fixed the function being prone to a buffer overrun (it didn't take the `maxlength` argument into account).
-<br/>Fixed the resulting string being not terminated by a `'\0'` symbol in certain situations (the function probably relied on the array for the resulting string being initialized by zero values, which isn't quite correct).
+<br/>Fixed the function being prone to a buffer overrun (it didn't take the <code>maxlength</code> argument into account).
+<br/>Fixed the resulting string not being terminated by a <code>'\0'</code> symbol in certain situations (the function probably relied on the array for the resulting string being initialized by zero values, which isn't quite correct).
 </li>
 
 <li>fputchar
-<br/>Fixed invalid return value when the `utf8` argument is `false`.
+<br/>Fixed invalid return value when the <code>utf8</code> argument is <code>false</code>.
 </li>
 
 <li>printf
