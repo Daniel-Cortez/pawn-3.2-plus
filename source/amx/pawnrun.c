@@ -166,7 +166,7 @@ int main(int argc,char *argv[])
     /* try adding an extension */
     strcat(filename, ".amx");
     err = aux_LoadProgram(&amx, filename, NULL);
-    if (err != AMX_ERR_NOTFOUND)
+    if (err == AMX_ERR_NOTFOUND)
       PrintUsage(argv[0]);
   } /* if */
   /* save the filename, for optionally reading the debug information (we could
