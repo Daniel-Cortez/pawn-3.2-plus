@@ -63,7 +63,7 @@ static cell AMX_NATIVE_CALL n_float(AMX *amx,const cell *params)
 
     (void)amx;
     /* Convert to a float. Calls the compilers long to float conversion. */
-    fValue = (REAL) params[1];
+    fValue = (REAL)params[1];
 
     /* Return the cell. */
     return amx_ftoc(fValue);
@@ -76,7 +76,7 @@ static cell AMX_NATIVE_CALL n_float(AMX *amx,const cell *params)
 static cell AMX_NATIVE_CALL n_floatint(AMX *amx,const cell *params)
 {
     REAL fA = amx_ctof(params[1]);
-    if ( fA>=0.0 )
+    if (fA >= 0.0)
         fA = (REAL)(floor((double)fA));
     else
         fA = (REAL)(ceil((double)fA));
@@ -98,10 +98,11 @@ static cell AMX_NATIVE_CALL n_strfloat(AMX *amx,const cell *params)
 
     (void)amx;
     /* They should have sent us 1 cell. */
-    assert(params[0]/sizeof(cell)==1);
+    assert(params[0]/sizeof(cell) == 1);
 
     /* Get the real address of the string. */
-    amx_GetAddr(amx,params[1],&pString);
+    if (amx_GetAddr(amx, params[1], &pString) != AMX_ERR_NONE)
+        return amx_RaiseError(amx, AMX_ERR_NATIVE), 0;
 
     /* Find out how long the string is in characters. */
     amx_StrLen(pString, &nLen);
@@ -204,13 +205,13 @@ static cell AMX_NATIVE_CALL n_floatround(AMX *amx,const cell *params)
             fA = (REAL)(ceil((double)fA));
             break;
         case floatround_tozero: /* round towards zero (truncate) */
-            if ( fA>=0.0 )
+            if (fA >= 0.0)
                 fA = (REAL)(floor((double)fA));
             else
                 fA = (REAL)(ceil((double)fA));
             break;
         default:      /* standard, round to nearest */
-            fA = (REAL)(floor((double)fA+.5));
+            fA = (REAL)(floor((double)fA + 0.5));
             break;
     } /* switch */
 
@@ -230,12 +231,11 @@ static cell AMX_NATIVE_CALL n_floatcmp(AMX *amx,const cell *params)
     (void)amx;
     fA = amx_ctof(params[1]);
     fB = amx_ctof(params[2]);
-    if (fA == fB)
-        return 0;
-    else if (fA>fB)
+    if (fA > fB)
         return 1;
-    else
+    if (fA < fB)
         return -1;
+    return 0;
 
 }
 
@@ -248,7 +248,7 @@ static cell AMX_NATIVE_CALL n_floatsqroot(AMX *amx,const cell *params)
     */
     REAL fA = amx_ctof(params[1]);
     fA = (REAL)sqrt(fA);
-    if (fA < 0)
+    if (fA < 0.0)
         return amx_RaiseError(amx, AMX_ERR_DOMAIN), 0;
     return amx_ftoc(fA);
 }
@@ -280,7 +280,7 @@ static cell AMX_NATIVE_CALL n_floatlog(AMX *amx,const cell *params)
     REAL fBase = amx_ctof(params[2]);
     (void)amx;
     if (fValue <= 0.0 || fBase <= 0)
-        return amx_RaiseError(amx, AMX_ERR_DOMAIN),0;
+        return amx_RaiseError(amx, AMX_ERR_DOMAIN), 0;
     if (fBase == 10.0) // ??? epsilon
         fValue = (REAL)log10(fValue);
     else
