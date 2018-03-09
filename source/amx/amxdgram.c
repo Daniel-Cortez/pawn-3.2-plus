@@ -26,7 +26,10 @@
 #include <assert.h>
 #include <stdio.h>
 #include "amx.h"
-#if defined LINUX
+#if defined __WIN32 || defined _WIN32 || defined WIN32
+  #include <malloc.h>
+  #include <winsock.h>
+#else
   #include <arpa/inet.h>
   #include <netinet/in.h>
   #include <sys/ioctl.h>
@@ -34,9 +37,6 @@
   #include <sys/socket.h>
   #include <netdb.h>
   #include <unistd.h>
-#else
-  #include <malloc.h>
-  #include <winsock.h>
 #endif
 
 
@@ -202,7 +202,10 @@ static cell AMX_NATIVE_CALL n_sendstring(AMX *amx, const cell *params)
   char *host, *message, *ptr;
   short port=AMX_DGRAMPORT;
 
-  amx_GetAddr(amx, params[1], &cstr);
+  if (amx_GetAddr(amx, params[1], &cstr)!=AMX_ERR_NONE) {
+    amx_RaiseError(amx,AMX_ERR_NATIVE);
+    return 0;
+  } /* if */
   amx_UTF8Len(cstr, &length);
 
   if ((message = alloca(length + 3 + 1)) != NULL) {
@@ -242,7 +245,10 @@ static cell AMX_NATIVE_CALL n_sendpacket(AMX *amx, const cell *params)
   char *host, *ptr;
   short port=AMX_DGRAMPORT;
 
-  amx_GetAddr(amx, params[1], &cstr);
+  if (amx_GetAddr(amx, params[1], &cstr)!=AMX_ERR_NONE) {
+    amx_RaiseError(amx,AMX_ERR_NATIVE);
+    return 0;
+  } /* if */
   amx_StrParam(amx, params[3], host);
   if (host != NULL && (ptr=strchr(host,':'))!=NULL && isdigit(ptr[1])) {
     *ptr++='\0';

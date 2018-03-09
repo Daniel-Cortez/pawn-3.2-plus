@@ -250,8 +250,7 @@ static cell AMX_NATIVE_CALL n_argindex(AMX *amx, const cell *params)
   max = (int)params[3];
   if (max <= 0)
     return 0;
-  amx_GetAddr(amx, params[2], &cptr);
-  if (cptr == NULL) {
+  if (amx_GetAddr(amx, params[2], &cptr) != AMX_ERR_NONE) {
     amx_RaiseError(amx, AMX_ERR_NATIVE);
     return 0;
   } /* if */
@@ -292,11 +291,13 @@ static cell AMX_NATIVE_CALL n_argstr(AMX *amx, const cell *params)
   if (max <= 0)
     return 0;
   amx_StrParam(amx, params[2], key);
-  amx_GetAddr(amx, params[3], &cptr);
-  if (cptr == NULL) {
+  if (key == NULL) {
+err_native:
     amx_RaiseError(amx, AMX_ERR_NATIVE);
     return 0;
   } /* if */
+  if (amx_GetAddr(amx, params[3], &cptr) != AMX_ERR_NONE)
+    goto err_native;
 
   option = matcharg(key, (int)params[1], &length);
   if (option == NULL)
@@ -335,11 +336,13 @@ static cell AMX_NATIVE_CALL n_argvalue(AMX *amx, const cell *params)
   cell *cptr;
 
   amx_StrParam(amx, params[2], key);
-  amx_GetAddr(amx, params[3], &cptr);
-  if (cptr == NULL) {
+  if (key == NULL) {
+err_native:
     amx_RaiseError(amx, AMX_ERR_NATIVE);
     return 0;
   } /* if */
+  if (amx_GetAddr(amx, params[3], &cptr) != AMX_ERR_NONE)
+    goto err_native;
 
   option = matcharg(key, (int)params[1], &length);
   if (option == NULL)

@@ -505,7 +505,10 @@ static cell AMX_NATIVE_CALL n_fwrite(AMX *amx, const cell *params)
   char *str;
   int len;
 
-  amx_GetAddr(amx,params[2],&cptr);
+  if (amx_GetAddr(amx,params[2],&cptr)!=AMX_ERR_NONE) {
+    amx_RaiseError(amx,AMX_ERR_NATIVE);
+    return 0;
+  } /* if */
   amx_StrLen(cptr,&len);
   if (len==0)
     return 0;
@@ -527,7 +530,6 @@ static cell AMX_NATIVE_CALL n_fwrite(AMX *amx, const cell *params)
 static cell AMX_NATIVE_CALL n_fread(AMX *amx, const cell *params)
 {
   int chars,max;
-  char *str;
   cell *cptr;
 
   max=(int)params[3];
@@ -536,14 +538,16 @@ static cell AMX_NATIVE_CALL n_fread(AMX *amx, const cell *params)
   if (params[4])
     max*=sizeof(cell);
 
-  amx_GetAddr(amx,params[2],&cptr);
-  str=(char *)alloca(max);
-  if (str==NULL || cptr==NULL) {
-    amx_RaiseError(amx, AMX_ERR_NATIVE);
+  if (amx_GetAddr(amx,params[2],&cptr)!=AMX_ERR_NONE) {
+err_native:
+    amx_RaiseError(amx,AMX_ERR_NATIVE);
     return 0;
   } /* if */
 
   if (params[4]) {
+    char *str=(char *)alloca(max);
+    if (str == NULL)
+      goto err_native;
     /* store as packed string, read an ASCII/ANSI string */
     chars=fgets_char((FILE*)params[1],str,max);
     assert(chars<max);
@@ -610,7 +614,10 @@ static cell AMX_NATIVE_CALL n_fblockwrite(AMX *amx, const cell *params)
   cell *cptr;
   cell count;
 
-  amx_GetAddr(amx,params[2],&cptr);
+  if (amx_GetAddr(amx,params[2],&cptr)!=AMX_ERR_NONE) {
+    amx_RaiseError(amx,AMX_ERR_NATIVE);
+    return 0;
+  } /* if */
   if (cptr!=NULL) {
     cell max=params[3];
     ucell v;
@@ -629,7 +636,10 @@ static cell AMX_NATIVE_CALL n_fblockread(AMX *amx, const cell *params)
   cell *cptr;
   cell count;
 
-  amx_GetAddr(amx,params[2],&cptr);
+  if (amx_GetAddr(amx,params[2],&cptr)!=AMX_ERR_NONE) {
+    amx_RaiseError(amx,AMX_ERR_NATIVE);
+    return 0;
+  } /* if */
   if (cptr!=NULL) {
     cell max=params[3];
     ucell v;
@@ -890,7 +900,10 @@ static cell AMX_NATIVE_CALL n_fmatch(AMX *amx, const cell *params)
       fullname[0]='\0';
     } else {
       /* copy the string into the destination */
-      amx_GetAddr(amx,params[1],&cptr);
+      if (amx_GetAddr(amx,params[1],&cptr)!=AMX_ERR_NONE) {
+        amx_RaiseError(amx,AMX_ERR_NATIVE);
+        return 0;
+      } /* if */
       amx_SetString(cptr,fullname,1,0,params[4]);
     } /* if */
   } /* if */
@@ -908,13 +921,20 @@ static cell AMX_NATIVE_CALL n_fstat(AMX *amx, const cell *params)
   if (name!=NULL && completename(fullname,name,sizearray(fullname))!=NULL) {
     struct stat stbuf;
     if (_tstat(name, &stbuf) == 0) {
-      amx_GetAddr(amx,params[2],&cptr);
+      if (amx_GetAddr(amx,params[2],&cptr)!=AMX_ERR_NONE) {
+err_native:
+        amx_RaiseError(amx,AMX_ERR_NATIVE);
+        return 0;
+      } /* if */
       *cptr=stbuf.st_size;
-      amx_GetAddr(amx,params[3],&cptr);
+      if (amx_GetAddr(amx,params[3],&cptr)!=AMX_ERR_NONE)
+        goto err_native;
       *cptr=(cell)stbuf.st_mtime;
-      amx_GetAddr(amx,params[4],&cptr);
+      if (amx_GetAddr(amx,params[4],&cptr)!=AMX_ERR_NONE)
+        goto err_native;
       *cptr=stbuf.st_mode;  /* mode/protection bits */
-      amx_GetAddr(amx,params[5],&cptr);
+      if (amx_GetAddr(amx,params[5],&cptr)!=AMX_ERR_NONE)
+        goto err_native;
       *cptr=stbuf.st_ino;   /* inode number, unique id for a file */
       result=1;
     } /* if */

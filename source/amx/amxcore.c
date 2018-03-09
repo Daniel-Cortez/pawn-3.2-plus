@@ -61,7 +61,6 @@
 
 
 #define CHARBITS        (8*sizeof(char))
-typedef unsigned char   uchar;
 
 #if !defined AMX_NOPROPLIST
 typedef struct _property_list {
@@ -137,26 +136,28 @@ static proplist *list_finditem(proplist *root,cell id,char *name,cell value,
 }
 #endif
 
-static cell AMX_NATIVE_CALL numargs(AMX *amx,const cell *params)
+/* numargs() */
+static cell AMX_NATIVE_CALL n_numargs(AMX *amx,const cell *params)
 {
   AMX_HEADER *hdr;
-  uchar *data;
-  cell bytes;
+  unsigned char *data;
+  cell numbytes;
 
   (void)params;
   hdr=(AMX_HEADER *)amx->base;
   data=amx->data ? amx->data : amx->base+(int)hdr->dat;
   /* the number of bytes is on the stack, at "frm + 2*cell" */
-  bytes= * (cell *)(data+(int)amx->frm+2*sizeof(cell));
+  numbytes= * (cell *)(data+(int)amx->frm+2*sizeof(cell));
   /* the number of arguments is the number of bytes divided
    * by the size of a cell */
-  return bytes/sizeof(cell);
+  return numbytes/sizeof(cell);
 }
 
-static cell AMX_NATIVE_CALL getarg(AMX *amx,const cell *params)
+/* getarg(arg, index=0) */
+static cell AMX_NATIVE_CALL n_getarg(AMX *amx,const cell *params)
 {
   AMX_HEADER *hdr;
-  uchar *data;
+  unsigned char *data;
   cell value;
 
   hdr=(AMX_HEADER *)amx->base;
@@ -170,10 +171,11 @@ static cell AMX_NATIVE_CALL getarg(AMX *amx,const cell *params)
   return value;
 }
 
-static cell AMX_NATIVE_CALL setarg(AMX *amx,const cell *params)
+/* setarg(arg, index=0, value) */
+static cell AMX_NATIVE_CALL n_setarg(AMX *amx,const cell *params)
 {
   AMX_HEADER *hdr;
-  uchar *data;
+  unsigned char *data;
   cell value;
 
   hdr=(AMX_HEADER *)amx->base;
@@ -190,31 +192,35 @@ static cell AMX_NATIVE_CALL setarg(AMX *amx,const cell *params)
   return 1;
 }
 
-static cell AMX_NATIVE_CALL heapspace(AMX *amx,const cell *params)
+/* heapspace() */
+static cell AMX_NATIVE_CALL n_heapspace(AMX *amx,const cell *params)
 {
   (void)params;
   return amx->stk - amx->hea;
 }
 
-static cell AMX_NATIVE_CALL funcidx(AMX *amx,const cell *params)
+/* funcidx(const name[]) */
+static cell AMX_NATIVE_CALL n_funcidx(AMX *amx,const cell *params)
 {
-  char name[64];
+  char name[sNAMEMAX+1];
   cell *cstr;
-  int index,err,len;
+  int index,len;
 
-  amx_GetAddr(amx,params[1],&cstr);
+  if (amx_GetAddr(amx,params[1],&cstr)!=AMX_ERR_NONE) {
+    amx_RaiseError(amx,AMX_ERR_NATIVE);
+    return 0;
+  } /* if */
 
   /* verify string length */
   amx_StrLen(cstr,&len);
-  if (len>=64) {
+  if (len>sNAMEMAX) {
     amx_RaiseError(amx,AMX_ERR_NATIVE);
     return 0;
   } /* if */
 
   amx_GetString(name,cstr,0,UNLIMITED);
-  err=amx_FindPublic(amx,name,&index);
-  if (err!=AMX_ERR_NONE)
-    index=-1;   /* this is not considered a fatal error */
+  if (amx_FindPublic(amx,name,&index)!=AMX_ERR_NONE)
+    return -1;  /* this is not considered a fatal error */
   return index;
 }
 
@@ -223,16 +229,16 @@ void amx_swapcell(cell *pc)
   union {
     cell c;
     #if PAWN_CELL_SIZE==16
-      uchar b[2];
+      unsigned char b[2];
     #elif PAWN_CELL_SIZE==32
-      uchar b[4];
+      unsigned char b[4];
     #elif PAWN_CELL_SIZE==64
-      uchar b[8];
+      unsigned char b[8];
 	#else
 	  #error Unsupported cell size
     #endif
   } value;
-  uchar t;
+  unsigned char t;
 
   assert(pc!=NULL);
   value.c = *pc;
@@ -266,7 +272,8 @@ void amx_swapcell(cell *pc)
   *pc = value.c;
 }
 
-static cell AMX_NATIVE_CALL swapchars(AMX *amx,const cell *params)
+/* swapchars(c) */
+static cell AMX_NATIVE_CALL n_swapchars(AMX *amx,const cell *params)
 {
   cell c;
 
@@ -278,7 +285,8 @@ static cell AMX_NATIVE_CALL swapchars(AMX *amx,const cell *params)
   return c;
 }
 
-static cell AMX_NATIVE_CALL core_tolower(AMX *amx,const cell *params)
+/* tolower(c) */
+static cell AMX_NATIVE_CALL n_tolower(AMX *amx,const cell *params)
 {
   (void)amx;
   #if defined __WIN32__ || defined _WIN32 || defined WIN32
@@ -292,7 +300,8 @@ static cell AMX_NATIVE_CALL core_tolower(AMX *amx,const cell *params)
   #endif
 }
 
-static cell AMX_NATIVE_CALL core_toupper(AMX *amx,const cell *params)
+/* toupper(c) */
+static cell AMX_NATIVE_CALL n_toupper(AMX *amx,const cell *params)
 {
   (void)amx;
   #if defined __WIN32__ || defined _WIN32 || defined WIN32
@@ -306,27 +315,32 @@ static cell AMX_NATIVE_CALL core_toupper(AMX *amx,const cell *params)
   #endif
 }
 
-static cell AMX_NATIVE_CALL core_min(AMX *amx,const cell *params)
+/* min(value1, value2) */
+static cell AMX_NATIVE_CALL n_min(AMX *amx,const cell *params)
 {
   (void)amx;
   return params[1] <= params[2] ? params[1] : params[2];
 }
 
-static cell AMX_NATIVE_CALL core_max(AMX *amx,const cell *params)
+/* max(value1, value2) */
+static cell AMX_NATIVE_CALL n_max(AMX *amx,const cell *params)
 {
   (void)amx;
   return params[1] >= params[2] ? params[1] : params[2];
 }
 
-static cell AMX_NATIVE_CALL core_clamp(AMX *amx,const cell *params)
+/* clamp(value, min=cellmin, max=cellmax) */
+static cell AMX_NATIVE_CALL n_clamp(AMX *amx,const cell *params)
 {
   cell value = params[1];
-  if (params[2] > params[3])  /* minimum value > maximum value ! */
+  if (params[2] > params[3]) {  /* minimum value > maximum value ! */
     amx_RaiseError(amx,AMX_ERR_NATIVE);
+    return 0;
+  } /* if */
   if (value < params[2])
-    value = params[2];
-  else if (value > params[3])
-    value = params[3];
+    return params[2];
+  if (value > params[3])
+    return params[3];
   return value;
 }
 
@@ -353,37 +367,49 @@ static int verify_addr(AMX *amx,cell addr)
   return err;
 }
 
-static cell AMX_NATIVE_CALL getproperty(AMX *amx,const cell *params)
+/* getproperty(id=0, const name[]="", value=cellmin, string[]="") */
+static cell AMX_NATIVE_CALL n_getproperty(AMX *amx,const cell *params)
 {
   cell *cstr;
   char *name;
   proplist *item;
 
-  amx_GetAddr(amx,params[2],&cstr);
+  if (amx_GetAddr(amx,params[2],&cstr)!=AMX_ERR_NONE) {
+    amx_RaiseError(amx,AMX_ERR_NATIVE);
+    return 0;
+  } /* if */
   name=MakePackedString(cstr);
   item=list_finditem(&proproot,params[1],name,params[3],NULL);
   /* if list_finditem() found the value, store the name */
   if (item!=NULL && item->value==params[3] && strlen(name)==0) {
     int needed=(strlen(item->name)+sizeof(cell)-1)/sizeof(cell);     /* # of cells needed */
     if (verify_addr(amx,(cell)(params[4]+needed))!=AMX_ERR_NONE) {
+err_native:
       free(name);
+      amx_RaiseError(amx,AMX_ERR_NATIVE);
       return 0;
     } /* if */
-    amx_GetAddr(amx,params[4],&cstr);
+    if (amx_GetAddr(amx,params[4],&cstr)!=AMX_ERR_NONE)
+      goto err_native;
     amx_SetString(cstr,item->name,1,0,UNLIMITED);
   } /* if */
   free(name);
   return (item!=NULL) ? item->value : 0;
 }
 
-static cell AMX_NATIVE_CALL setproperty(AMX *amx,const cell *params)
+/* setproperty(id=0, const name[]="", value=cellmin, const string[]="") */
+static cell AMX_NATIVE_CALL n_setproperty(AMX *amx,const cell *params)
 {
   cell prev=0;
   cell *cstr;
   char *name;
   proplist *item;
 
-  amx_GetAddr(amx,params[2],&cstr);
+  if (amx_GetAddr(amx,params[2],&cstr)!=AMX_ERR_NONE) {
+err_native:
+    amx_RaiseError(amx,AMX_ERR_NATIVE);
+    return 0;
+  } /* if */
   name=MakePackedString(cstr);
   item=list_finditem(&proproot,params[1],name,params[3],NULL);
   if (item==NULL)
@@ -394,7 +420,8 @@ static cell AMX_NATIVE_CALL setproperty(AMX *amx,const cell *params)
     prev=item->value;
     if (strlen(name)==0) {
       free(name);
-      amx_GetAddr(amx,params[4],&cstr);
+      if (amx_GetAddr(amx,params[4],&cstr)!=AMX_ERR_NONE)
+        goto err_native;
       name=MakePackedString(cstr);
     } /* if */
     list_setitem(item,params[1],name,params[3]);
@@ -403,14 +430,18 @@ static cell AMX_NATIVE_CALL setproperty(AMX *amx,const cell *params)
   return prev;
 }
 
-static cell AMX_NATIVE_CALL delproperty(AMX *amx,const cell *params)
+/* deleteproperty(id=0, const name[]="", value=cellmin) */
+static cell AMX_NATIVE_CALL n_delproperty(AMX *amx,const cell *params)
 {
   cell prev=0;
   cell *cstr;
   char *name;
   proplist *item,*pred;
 
-  amx_GetAddr(amx,params[2],&cstr);
+  if (amx_GetAddr(amx,params[2],&cstr)!=AMX_ERR_NONE) {
+    amx_RaiseError(amx,AMX_ERR_NATIVE);
+    return 0;
+  } /* if */
   name=MakePackedString(cstr);
   item=list_finditem(&proproot,params[1],name,params[3],&pred);
   if (item!=NULL) {
@@ -421,13 +452,17 @@ static cell AMX_NATIVE_CALL delproperty(AMX *amx,const cell *params)
   return prev;
 }
 
-static cell AMX_NATIVE_CALL existproperty(AMX *amx,const cell *params)
+/* existproperty(id=0, const name[]="", value=cellmin) */
+static cell AMX_NATIVE_CALL n_existproperty(AMX *amx,const cell *params)
 {
   cell *cstr;
   char *name;
   proplist *item;
 
-  amx_GetAddr(amx,params[2],&cstr);
+  if (amx_GetAddr(amx,params[2],&cstr)!=AMX_ERR_NONE) {
+    amx_RaiseError(amx,AMX_ERR_NATIVE);
+    return 0;
+  } /* if */
   name=MakePackedString(cstr);
   item=list_finditem(&proproot,params[1],name,params[3],NULL);
   free(name);
@@ -447,7 +482,8 @@ static unsigned long IL_StandardRandom_seed = INITIAL_SEED; /* always use a non-
 #if defined __BORLANDC__ || defined __WATCOMC__
   #pragma argsused
 #endif
-static cell AMX_NATIVE_CALL core_random(AMX *amx,const cell *params)
+/* random(max) */
+static cell AMX_NATIVE_CALL n_random(AMX *amx,const cell *params)
 {
     unsigned long lo, hi, ll, lh, hh, hl;
     unsigned long result;
@@ -480,25 +516,25 @@ static cell AMX_NATIVE_CALL core_random(AMX *amx,const cell *params)
   extern "C"
 #endif
 const AMX_NATIVE_INFO core_Natives[] = {
-  { "numargs",       numargs },
-  { "getarg",        getarg },
-  { "setarg",        setarg },
-  { "heapspace",     heapspace },
-  { "funcidx",       funcidx },
-  { "swapchars",     swapchars },
-  { "tolower",       core_tolower },
-  { "toupper",       core_toupper },
-  { "min",           core_min },
-  { "max",           core_max },
-  { "clamp",         core_clamp },
-#if !defined AMX_NORANDOM
-  { "random",        core_random },
-#endif
+  { "numargs",       n_numargs },
+  { "getarg",        n_getarg },
+  { "setarg",        n_setarg },
+  { "heapspace",     n_heapspace },
+  { "funcidx",       n_funcidx },
+  { "swapchars",     n_swapchars },
+  { "tolower",       n_tolower },
+  { "toupper",       n_toupper },
+  { "min",           n_min },
+  { "max",           n_max },
+  { "clamp",         n_clamp },
 #if !defined AMX_NOPROPLIST
-  { "getproperty",   getproperty },
-  { "setproperty",   setproperty },
-  { "deleteproperty",delproperty },
-  { "existproperty", existproperty },
+  { "getproperty",   n_getproperty },
+  { "setproperty",   n_setproperty },
+  { "deleteproperty",n_delproperty },
+  { "existproperty", n_existproperty },
+#endif
+#if !defined AMX_NORANDOM
+  { "random",        n_random },
 #endif
   { NULL, NULL }        /* terminator */
 };
