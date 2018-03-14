@@ -358,13 +358,8 @@ static char *MakePackedString(cell *cptr)
 
 static int verify_addr(AMX *amx,cell addr)
 {
-  int err;
   cell *cdest;
-
-  err=amx_GetAddr(amx,addr,&cdest);
-  if (err!=AMX_ERR_NONE)
-    amx_RaiseError(amx,err);
-  return err;
+  return amx_GetAddr(amx,addr,&cdest);
 }
 
 /* getproperty(id=0, const name[]="", value=cellmin, string[]="") */

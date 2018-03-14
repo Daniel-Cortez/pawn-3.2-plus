@@ -235,6 +235,12 @@ static const TCHAR *matcharg(const TCHAR *key, int skip, int *length)
   return option;
 }
 
+static int verify_addr(AMX *amx, cell addr)
+{
+  cell *cdest;
+  return amx_GetAddr(amx, addr, &cdest);
+}
+
 
 /* bool: argindex(index, value[], maxlength=sizeof value, bool:pack=false)
  * returns true if the option was found and false on error or if the parameter "index" is out of range
@@ -251,9 +257,12 @@ static cell AMX_NATIVE_CALL n_argindex(AMX *amx, const cell *params)
   if (max <= 0)
     return 0;
   if (amx_GetAddr(amx, params[2], &cptr) != AMX_ERR_NONE) {
+err_native:
     amx_RaiseError(amx, AMX_ERR_NATIVE);
     return 0;
   } /* if */
+  if (params[3] <= (cell)0 || verify_addr(amx, params[2]+params[3]) != AMX_ERR_NONE)
+    goto err_native;
 
   if ((option = tokenize(cmdline, params[1], &length)) == NULL) {
     /* option not found, return an empty string */
@@ -297,6 +306,8 @@ err_native:
     return 0;
   } /* if */
   if (amx_GetAddr(amx, params[3], &cptr) != AMX_ERR_NONE)
+    goto err_native;
+  if (params[4] <= (cell)0 || verify_addr(amx, params[3]+params[4]) != AMX_ERR_NONE)
     goto err_native;
 
   option = matcharg(key, (int)params[1], &length);
