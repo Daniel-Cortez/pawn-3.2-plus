@@ -1021,6 +1021,12 @@ int amx_printstring(AMX *amx,cell *cstr,AMX_FMTINFO *info)
   return paramidx;
 }
 
+static int verify_addr(AMX *amx,cell addr)
+{
+  cell *cdest;
+  return amx_GetAddr(amx,addr,&cdest);
+}
+
 #if !defined AMX_STRING_LIB
 
 #if defined AMX_ALTPRINT
@@ -1108,7 +1114,7 @@ static cell AMX_NATIVE_CALL n_getchar(AMX *amx,const cell *params)
   return c;
 }
 
-/* getstring(string[], size=sizeof string, bool:pack=false) */
+/* getstring(string[], maxlength=sizeof string, bool:pack=false) */
 static cell AMX_NATIVE_CALL n_getstring(AMX *amx,const cell *params)
 {
   int c,chars,max;
@@ -1145,9 +1151,12 @@ static cell AMX_NATIVE_CALL n_getstring(AMX *amx,const cell *params)
     str[chars]='\0';
 
     if (amx_GetAddr(amx,params[1],&cptr)!=AMX_ERR_NONE) {
+err_native:
       amx_RaiseError(amx,AMX_ERR_NATIVE);
       return 0;
     } /* if */
+    if (params[2]<=(cell)0 || verify_addr(amx,params[1]+params[2])!=AMX_ERR_NONE)
+      goto err_native;
     amx_SetString(cptr,(char*)str,(int)params[3],sizeof(TCHAR)>1,max);
 
   } /* if */
