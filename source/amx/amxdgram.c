@@ -196,41 +196,42 @@ static int dgramBound = 0;
  */
 static cell AMX_NATIVE_CALL n_sendstring(AMX *amx, const cell *params)
 {
-  int r = 0, length;
+  int length;
   cell *cstr;
   char *host, *message, *ptr;
   short port=AMX_DGRAMPORT;
 
   if (amx_GetAddr(amx, params[1], &cstr)!=AMX_ERR_NONE) {
+err_native:
     amx_RaiseError(amx,AMX_ERR_NATIVE);
     return 0;
   } /* if */
   amx_UTF8Len(cstr, &length);
 
-  if ((message = alloca(length + 3 + 1)) != NULL) {
-    /* insert the byte order mark (BOM) */
-    message[0]='\xef';
-    message[1]='\xbb';
-    message[2]='\xbf';
-    /* if this is a wide string, convert it to UTF-8 */
-    if ((ucell)*cstr<=UNPACKEDMAX) {
-      ptr=message+3;
-      while (*cstr!=0)
-        amx_UTF8Put(ptr, &ptr, length - (ptr-message), *cstr++);
-      *ptr='\0';
-    } else {
-      amx_GetString(message+3, cstr, 0, UNLIMITED);
-    } /* if */
-
-    amx_StrParam(amx, params[2], host);
-    if (host != NULL && (ptr=strchr(host,':'))!=NULL && isdigit(ptr[1])) {
-      *ptr++='\0';
-      port=(short)atoi(ptr);
-    } /* if */
-    r= (udp_Send(host,port,message,strlen(message)+1) > 0);
+  if ((message = alloca(length + 3 + 1)) == NULL)
+    goto err_native;
+  /* insert the byte order mark (BOM) */
+  message[0]='\xef';
+  message[1]='\xbb';
+  message[2]='\xbf';
+  /* if this is a wide string, convert it to UTF-8 */
+  if ((ucell)*cstr<=UNPACKEDMAX) {
+    ptr=message+3;
+    while (*cstr!=0)
+      amx_UTF8Put(ptr, &ptr, length - (ptr-message), *cstr++);
+    *ptr='\0';
+  } else {
+    amx_GetString(message+3, cstr, 0, UNLIMITED);
   } /* if */
 
-  return r;
+  amx_StrParam(amx, params[2], host);
+  if (host == NULL)
+    goto err_native;
+  if ((ptr=strchr(host,':'))!=NULL && isdigit(ptr[1])) {
+    *ptr++='\0';
+    port=(short)atoi(ptr);
+  } /* if */
+  return (udp_Send(host,port,message,strlen(message)+1) > 0);
 }
 
 /* sendpacket(const packet[], size, const destination[]="")
@@ -245,11 +246,14 @@ static cell AMX_NATIVE_CALL n_sendpacket(AMX *amx, const cell *params)
   short port=AMX_DGRAMPORT;
 
   if (amx_GetAddr(amx, params[1], &cstr)!=AMX_ERR_NONE) {
+err_native:
     amx_RaiseError(amx,AMX_ERR_NATIVE);
     return 0;
   } /* if */
   amx_StrParam(amx, params[3], host);
-  if (host != NULL && (ptr=strchr(host,':'))!=NULL && isdigit(ptr[1])) {
+  if (host == NULL)
+    goto err_native;
+  if ((ptr=strchr(host,':'))!=NULL && isdigit(ptr[1])) {
     *ptr++='\0';
     port=(short)atoi(ptr);
   } /* if */
@@ -309,12 +313,14 @@ static int AMXAPI amx_DGramIdle(AMX *amx, int AMXAPI Exec(AMX *, cell *, int))
       if (amx_UTF8Check(msg,&chars)==AMX_ERR_NONE) {
         cell *array=alloca((chars+1)*sizeof(cell));
         cell *ptr=array;
-        if (array!=NULL) {
-          while (err==AMX_ERR_NONE && *msg!='\0')
-            amx_UTF8Get(msg,&msg,ptr++);
-          *ptr=0;               /* zero-terminate */
-          amx_PushArray(amx,&amx_addr_msg,NULL,array,chars+1);
+        if (array==NULL) {
+          err=AMX_ERR_MEMORY;
+          goto release_src;
         } /* if */
+        while (err==AMX_ERR_NONE && *msg!='\0')
+          amx_UTF8Get(msg,&msg,ptr++);
+        *ptr=0;               /* zero-terminate */
+        amx_PushArray(amx,&amx_addr_msg,NULL,array,chars+1);
       } else {
         amx_PushString(amx,&amx_addr_msg,NULL,msg,1,0);
       } /* if */
@@ -323,6 +329,7 @@ static int AMXAPI amx_DGramIdle(AMX *amx, int AMXAPI Exec(AMX *, cell *, int))
     while (err==AMX_ERR_SLEEP)
       err=Exec(amx,NULL,AMX_EXEC_CONT);
     amx_Release(amx,amx_addr_msg);
+release_src:
     amx_Release(amx,amx_addr_src);
   } /* if */
 
