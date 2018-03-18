@@ -68,6 +68,26 @@ if(WIN32)
   endif()
 endif()
 
+# Check include files availability
+set(REQUIRED_INCLUDE_FILES
+  "float.h"
+  "tchar.h"
+  "utime.h"
+  "unistd.h"
+  "sys/unistd.h"
+  "fcntl.h"
+  "sys/fcntl.h"
+  "sys/sendfile.h"
+)
+foreach(INCLUDE_FILE ${REQUIRED_INCLUDE_FILES})
+  string(REGEX REPLACE "\\.|/" "_" DEFINITION_NAME "HAVE_${INCLUDE_FILE}")
+  string(TOUPPER ${DEFINITION_NAME} DEFINITION_NAME)
+  check_include_file("${INCLUDE_FILE}" ${DEFINITION_NAME})
+  if(${DEFINITION_NAME})
+    set(SHARED_COMPILE_FLAGS "${SHARED_COMPILE_FLAGS} -D${DEFINITION_NAME}")
+  endif()
+endforeach()
+
 include_directories("${SHARED_INCLUDE_DIRECTORIES}")
 add_definitions(-DFLOATPOINT -DFIXEDPOINT)
 

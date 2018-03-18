@@ -37,13 +37,6 @@ set(REQUIRED_INCLUDE_FILES
   "inttypes.h"
   "stdint.h"
   "alloca.h"
-  "tchar.h"
-  "utime.h"
-  "unistd.h"
-  "sys/unistd.h"
-  "fcntl.h"
-  "sys/fcntl.h"
-  "sys/sendfile.h"
 )
 foreach(INCLUDE_FILE ${REQUIRED_INCLUDE_FILES})
   string(REGEX REPLACE "\\.|/" "_" DEFINITION_NAME "HAVE_${INCLUDE_FILE}")

@@ -34,7 +34,7 @@
       return amx_RaiseError(amx,AMX_ERR_PARAMS),0; \
   } while(0)
 
-#define CELLMIN   (-1 << (8*sizeof(cell) - 1))
+#define CELLMIN   (cell)((ucell)-1 << (8*sizeof(cell) - 1))
 
 #define SECONDS_PER_MINUTE	60
 #define SECONDS_PER_HOUR	3600
