@@ -21,7 +21,7 @@ enum
     white,
     }
 
-native getchar(echo=true);
+native getchar(bool:echo=true);
 native getstring(string[], maxlength=sizeof string, bool:pack=false);
 native getvalue(base=10, term=0x0d, ...);    /* 0x0d == '\r' */
 native print(const string[], foreground=-1, background=-1, highlight=-1);

@@ -45,6 +45,6 @@ native       fseek(File: handle, position = 0, seek_whence: whence = seek_start)
 native       flength(File: handle);
 native       fexist(const pattern[]);
 native bool: fmatch(name[], const pattern[], index = 0, size = sizeof name);
-native bool: fstat(name[], &size = 0, &timestamp = 0, &mode = 0, &inode = 0);
+native bool: fstat(const name[], &size = 0, &timestamp = 0, &mode = 0, &inode = 0);
 native bool: fattrib(const name[], timestamp=0, attrib=0x0f);
 native       filecrc(const name[]);
