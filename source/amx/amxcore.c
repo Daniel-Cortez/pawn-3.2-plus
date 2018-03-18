@@ -58,6 +58,12 @@
   #pragma clang diagnostic ignored "-Wlogical-op-parentheses"
 #endif
 
+#define EXPECT_PARAMS(num) \
+  do { \
+    if (params[0]!=(num)*sizeof(cell)) \
+      return amx_RaiseError(amx,AMX_ERR_PARAMS),0; \
+  } while(0)
+
 
 #define CHARBITS        (8*sizeof(char))
 
@@ -142,6 +148,8 @@ static cell AMX_NATIVE_CALL n_numargs(AMX *amx,const cell *params)
   unsigned char *data;
   cell numbytes;
 
+  EXPECT_PARAMS(0);
+
   (void)params;
   hdr=(AMX_HEADER *)amx->base;
   data=amx->data ? amx->data : amx->base+(int)hdr->dat;
@@ -158,6 +166,8 @@ static cell AMX_NATIVE_CALL n_getarg(AMX *amx,const cell *params)
   AMX_HEADER *hdr;
   unsigned char *data;
   cell value;
+
+  EXPECT_PARAMS(2);
 
   hdr=(AMX_HEADER *)amx->base;
   data=amx->data ? amx->data : amx->base+(int)hdr->dat;
@@ -177,6 +187,8 @@ static cell AMX_NATIVE_CALL n_setarg(AMX *amx,const cell *params)
   unsigned char *data;
   cell value;
 
+  EXPECT_PARAMS(3);
+
   hdr=(AMX_HEADER *)amx->base;
   data=amx->data ? amx->data : amx->base+(int)hdr->dat;
   /* get the base value */
@@ -194,6 +206,7 @@ static cell AMX_NATIVE_CALL n_setarg(AMX *amx,const cell *params)
 /* heapspace() */
 static cell AMX_NATIVE_CALL n_heapspace(AMX *amx,const cell *params)
 {
+  EXPECT_PARAMS(0);
   (void)params;
   return amx->stk - amx->hea;
 }
@@ -204,6 +217,8 @@ static cell AMX_NATIVE_CALL n_funcidx(AMX *amx,const cell *params)
   char name[sNAMEMAX+1];
   cell *cstr;
   int index,len;
+
+  EXPECT_PARAMS(1);
 
   if (amx_GetAddr(amx,params[1],&cstr)!=AMX_ERR_NONE) {
     amx_RaiseError(amx,AMX_ERR_NATIVE);
@@ -219,7 +234,7 @@ static cell AMX_NATIVE_CALL n_funcidx(AMX *amx,const cell *params)
 
   amx_GetString(name,cstr,0,UNLIMITED);
   if (amx_FindPublic(amx,name,&index)!=AMX_ERR_NONE)
-    return -1;  /* this is not considered a fatal error */
+    index=-1;  /* this is not considered a fatal error */
   return index;
 }
 
@@ -276,6 +291,8 @@ static cell AMX_NATIVE_CALL n_swapchars(AMX *amx,const cell *params)
 {
   cell c;
 
+  EXPECT_PARAMS(1);
+
   (void)amx;
   assert((size_t)params[0]==sizeof(cell));
 
@@ -287,6 +304,7 @@ static cell AMX_NATIVE_CALL n_swapchars(AMX *amx,const cell *params)
 /* tolower(c) */
 static cell AMX_NATIVE_CALL n_tolower(AMX *amx,const cell *params)
 {
+  EXPECT_PARAMS(1);
   (void)amx;
   #if defined __WIN32__ || defined _WIN32 || defined WIN32
     return (cell)CharLower((LPTSTR)params[1]);
@@ -302,6 +320,7 @@ static cell AMX_NATIVE_CALL n_tolower(AMX *amx,const cell *params)
 /* toupper(c) */
 static cell AMX_NATIVE_CALL n_toupper(AMX *amx,const cell *params)
 {
+  EXPECT_PARAMS(1);
   (void)amx;
   #if defined __WIN32__ || defined _WIN32 || defined WIN32
     return (cell)CharUpper((LPTSTR)params[1]);
@@ -317,6 +336,7 @@ static cell AMX_NATIVE_CALL n_toupper(AMX *amx,const cell *params)
 /* min(value1, value2) */
 static cell AMX_NATIVE_CALL n_min(AMX *amx,const cell *params)
 {
+  EXPECT_PARAMS(2);
   (void)amx;
   return params[1] <= params[2] ? params[1] : params[2];
 }
@@ -324,6 +344,7 @@ static cell AMX_NATIVE_CALL n_min(AMX *amx,const cell *params)
 /* max(value1, value2) */
 static cell AMX_NATIVE_CALL n_max(AMX *amx,const cell *params)
 {
+  EXPECT_PARAMS(2);
   (void)amx;
   return params[1] >= params[2] ? params[1] : params[2];
 }
@@ -331,7 +352,11 @@ static cell AMX_NATIVE_CALL n_max(AMX *amx,const cell *params)
 /* clamp(value, min=cellmin, max=cellmax) */
 static cell AMX_NATIVE_CALL n_clamp(AMX *amx,const cell *params)
 {
-  cell value = params[1];
+  cell value;
+
+  EXPECT_PARAMS(3);
+
+  value = params[1];
   if (params[2] > params[3]) {  /* minimum value > maximum value ! */
     amx_RaiseError(amx,AMX_ERR_NATIVE);
     return 0;
@@ -368,6 +393,8 @@ static cell AMX_NATIVE_CALL n_getproperty(AMX *amx,const cell *params)
   char *name;
   proplist *item;
 
+  EXPECT_PARAMS(4);
+
   if (amx_GetAddr(amx,params[2],&cstr)!=AMX_ERR_NONE) {
     amx_RaiseError(amx,AMX_ERR_NATIVE);
     return 0;
@@ -394,16 +421,19 @@ err_native:
 /* setproperty(id=0, const name[]="", value=cellmin, const string[]="") */
 static cell AMX_NATIVE_CALL n_setproperty(AMX *amx,const cell *params)
 {
-  cell prev=0;
+  cell prev;
   cell *cstr;
   char *name;
   proplist *item;
+
+  EXPECT_PARAMS(4);
 
   if (amx_GetAddr(amx,params[2],&cstr)!=AMX_ERR_NONE) {
 err_native:
     amx_RaiseError(amx,AMX_ERR_NATIVE);
     return 0;
   } /* if */
+  prev=0;
   name=MakePackedString(cstr);
   item=list_finditem(&proproot,params[1],name,params[3],NULL);
   if (item==NULL)
@@ -427,15 +457,18 @@ err_native:
 /* deleteproperty(id=0, const name[]="", value=cellmin) */
 static cell AMX_NATIVE_CALL n_delproperty(AMX *amx,const cell *params)
 {
-  cell prev=0;
+  cell prev;
   cell *cstr;
   char *name;
   proplist *item,*pred;
+
+  EXPECT_PARAMS(3);
 
   if (amx_GetAddr(amx,params[2],&cstr)!=AMX_ERR_NONE) {
     amx_RaiseError(amx,AMX_ERR_NATIVE);
     return 0;
   } /* if */
+  prev=0;
   name=MakePackedString(cstr);
   item=list_finditem(&proproot,params[1],name,params[3],&pred);
   if (item!=NULL) {
@@ -452,6 +485,8 @@ static cell AMX_NATIVE_CALL n_existproperty(AMX *amx,const cell *params)
   cell *cstr;
   char *name;
   proplist *item;
+
+  EXPECT_PARAMS(3);
 
   if (amx_GetAddr(amx,params[2],&cstr)!=AMX_ERR_NONE) {
     amx_RaiseError(amx,AMX_ERR_NATIVE);
@@ -479,29 +514,31 @@ static unsigned long IL_StandardRandom_seed = INITIAL_SEED; /* always use a non-
 /* random(max) */
 static cell AMX_NATIVE_CALL n_random(AMX *amx,const cell *params)
 {
-    unsigned long lo, hi, ll, lh, hh, hl;
-    unsigned long result;
+  unsigned long lo, hi, ll, lh, hh, hl;
+  unsigned long result;
 
-    /* one-time initialization (or, mostly one-time) */
-    #if !defined SN_TARGET_PS2 && !defined _WIN32_WCE && !defined __ICC430__
-        if (IL_StandardRandom_seed == INITIAL_SEED)
-            IL_StandardRandom_seed=(unsigned long)time(NULL);
-    #endif
+  EXPECT_PARAMS(1);
 
-    (void)amx;
+  /* one-time initialization (or, mostly one-time) */
+  #if !defined SN_TARGET_PS2 && !defined _WIN32_WCE && !defined __ICC430__
+      if (IL_StandardRandom_seed == INITIAL_SEED)
+          IL_StandardRandom_seed=(unsigned long)time(NULL);
+  #endif
 
-    lo = IL_StandardRandom_seed & 0xffff;
-    hi = IL_StandardRandom_seed >> 16;
-    IL_StandardRandom_seed = IL_StandardRandom_seed * IL_RMULT + 12345;
-    ll = lo * (IL_RMULT  & 0xffff);
-    lh = lo * (IL_RMULT >> 16    );
-    hl = hi * (IL_RMULT  & 0xffff);
-    hh = hi * (IL_RMULT >> 16    );
-    result = ((ll + 12345) >> 16) + lh + hl + (hh << 16);
-    result &= ~LONG_MIN;        /* remove sign bit */
-    if (params[1]!=0)
-        result %= params[1];
-    return (cell)result;
+  (void)amx;
+
+  lo = IL_StandardRandom_seed & 0xffff;
+  hi = IL_StandardRandom_seed >> 16;
+  IL_StandardRandom_seed = IL_StandardRandom_seed * IL_RMULT + 12345;
+  ll = lo * (IL_RMULT  & 0xffff);
+  lh = lo * (IL_RMULT >> 16    );
+  hl = hi * (IL_RMULT  & 0xffff);
+  hh = hi * (IL_RMULT >> 16    );
+  result = ((ll + 12345) >> 16) + lh + hl + (hh << 16);
+  result &= ~LONG_MIN;        /* remove sign bit */
+  if (params[1]!=0)
+    result %= params[1];
+  return (cell)result;
 }
 #endif
 

@@ -28,6 +28,12 @@
   #include <mmsystem.h>
 #endif
 
+#define EXPECT_PARAMS(num) \
+  do { \
+    if (params[0]!=(num)*sizeof(cell)) \
+      return amx_RaiseError(amx,AMX_ERR_PARAMS),0; \
+  } while(0)
+
 #define CELLMIN   (-1 << (8*sizeof(cell) - 1))
 
 #define SECONDS_PER_MINUTE	60
@@ -49,9 +55,9 @@
 #else
   #define INIT_TIMER()
 #endif
-static unsigned long timestamp;
-static unsigned long timelimit;
-static int timerepeat;
+static unsigned long timestamp=0;
+static unsigned long timelimit=0;
+static int timerepeat=0;
 
 static const unsigned char monthdays[12] = { 31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31 };
 
@@ -199,17 +205,18 @@ static void setdate(cell year,cell month,cell day)
 }
 
 
-/* settime(hour, minute, second)
+/* settime(hour=cellmin, minute=cellmin, second=cellmin)
  * Always returns 0
  */
 static cell AMX_NATIVE_CALL n_settime(AMX *amx, const cell *params)
 {
+  EXPECT_PARAMS(3);
   (void)amx;
   settime(params[1],params[2],params[3]);
   return 0;
 }
 
-/* gettime(&hour, &minute, &second)
+/* gettime(&hour=0, &minute=0, &second=0)
  * The return value is the number of seconds since 1 January 1970 (Unix system
  * time).
  */
@@ -219,7 +226,7 @@ static cell AMX_NATIVE_CALL n_gettime(AMX *amx, const cell *params)
   struct tm gtm;
   cell *cptr;
 
-  assert(params[0]==(int)(3*sizeof(cell)));
+  EXPECT_PARAMS(3);
 
   time(&sec1970);
 
@@ -240,17 +247,18 @@ static cell AMX_NATIVE_CALL n_gettime(AMX *amx, const cell *params)
   return (cell)sec1970;
 }
 
-/* setdate(year, month, day)
+/* setdate(year=cellmin, month=cellmin, day=cellmin)
  * Always returns 0
  */
 static cell AMX_NATIVE_CALL n_setdate(AMX *amx, const cell *params)
 {
+  EXPECT_PARAMS(3);
   (void)amx;
   setdate(params[1],params[2],params[3]);
   return 0;
 }
 
-/* getdate(&year, &month, &day)
+/* getdate(&year=0, &month=0, &day=0)
  * The return value is the number of days since the start of the year. January
  * 1 is day 1 of the year.
  */
@@ -260,7 +268,7 @@ static cell AMX_NATIVE_CALL n_getdate(AMX *amx, const cell *params)
   struct tm gtm;
   cell *cptr;
 
-  assert(params[0]==(int)(3*sizeof(cell)));
+  EXPECT_PARAMS(3);
 
   time(&sec1970);
 
@@ -275,7 +283,7 @@ static cell AMX_NATIVE_CALL n_getdate(AMX *amx, const cell *params)
   return gtm.tm_yday+1;
 }
 
-/* tickcount(&granularity)
+/* tickcount(&granularity=0)
  * Returns the number of milliseconds since start-up. For a 32-bit cell, this
  * count overflows after approximately 24 days of continuous operation.
  */
@@ -283,7 +291,7 @@ static cell AMX_NATIVE_CALL n_tickcount(AMX *amx, const cell *params)
 {
   cell *cptr;
 
-  assert(params[0]==(int)sizeof(cell));
+  EXPECT_PARAMS(1);
 
   INIT_TIMER();
   #if defined __WIN32__ || defined _WIN32 || defined WIN32
@@ -303,9 +311,9 @@ static cell AMX_NATIVE_CALL n_delay(AMX *amx, const cell *params)
 {
   unsigned long stamp;
 
-  (void)amx;
-  assert(params[0]==(int)sizeof(cell));
+  EXPECT_PARAMS(1);
 
+  (void)amx;
   INIT_TIMER();
   stamp=gettimestamp();
   while (gettimestamp()-stamp < (unsigned long)params[1])
@@ -313,12 +321,13 @@ static cell AMX_NATIVE_CALL n_delay(AMX *amx, const cell *params)
   return 0;
 }
 
-/* settimer(milliseconds, bool: singleshot = false)
+/* settimer(milliseconds, bool: singleshot=false)
  * Sets the delay until the @timer() callback is called. The timer may either
  * be single-shot or repetitive.
  */
 static cell AMX_NATIVE_CALL n_settimer(AMX *amx, const cell *params)
 {
+  EXPECT_PARAMS(2);
   (void)amx;
   assert(params[0]==(int)(2*sizeof(cell)));
   timestamp=gettimestamp();
@@ -335,7 +344,8 @@ static cell AMX_NATIVE_CALL n_gettimer(AMX *amx, const cell *params)
 {
   cell *cptr;
 
-  assert(params[0]==(int)(2*sizeof(cell)));
+  EXPECT_PARAMS(2);
+
   if (amx_GetAddr(amx,params[1],&cptr)==AMX_ERR_NONE)
     *cptr=timelimit;
   if (amx_GetAddr(amx,params[1],&cptr)==AMX_ERR_NONE)
@@ -343,36 +353,43 @@ static cell AMX_NATIVE_CALL n_gettimer(AMX *amx, const cell *params)
   return timelimit>0;
 }
 
-/* settimestamp(seconds1970) sets the date and time from a single parameter: the
- * number of seconds since 1 January 1970.
+/* settimestamp(seconds1970)
+ * sets the date and time from a single parameter: the number of seconds since
+ * 1 January 1970.
  */
 static cell AMX_NATIVE_CALL n_settimestamp(AMX *amx, const cell *params)
 {
-  #if defined __WIN32__ || defined _WIN32 || defined WIN32
-    int year, month, day, hour, minute, second;
+  EXPECT_PARAMS(1);
 
-    stamp2datetime(params[1],
-                   &year, &month, &day,
-                   &hour, &minute, &second);
-    setdate(year, month, day);
-    settime(hour, minute, second);
-  #else
-    /* Linux/Unix (and some DOS compilers) have stime(); on Linux/Unix, you
-     * must have "root" permission to call stime()
-     */
-    time_t sec1970=(time_t)params[1];
-    stime(&sec1970);
-  #endif
   (void)amx;
+  do {
+    #if defined __WIN32__ || defined _WIN32 || defined WIN32
+      int year, month, day, hour, minute, second;
+
+      stamp2datetime(params[1],
+        &year, &month, &day,
+        &hour, &minute, &second);
+      setdate(year, month, day);
+      settime(hour, minute, second);
+    #else
+      /* Linux/Unix (and some DOS compilers) have stime(); on Linux/Unix, you
+       * must have "root" permission to call stime()
+       */
+      time_t sec1970 = (time_t)params[1];
+      stime(&sec1970);
+    #endif
+  } while (0);
 
   return 0;
 }
 
-/* cvttimestamp(seconds1970, &year, &month, &day, &hour, &minute, &second)
+/* cvttimestamp(seconds1970, &year=0, &month=0, &day=0, &hour=0, &minute=0, &second=0)
  */
 static cell AMX_NATIVE_CALL n_cvttimestamp(AMX *amx, const cell *params)
 {
   int year, month, day, hour, minute, second;
+
+  EXPECT_PARAMS(7);
 
   (void)amx;
   stamp2datetime(params[1],
@@ -420,7 +437,7 @@ const AMX_NATIVE_INFO time_Natives[] = {
   { "setdate",      n_setdate },
   { "tickcount",    n_tickcount },
   { "settimer",     n_settimer },
-  { "gettimer",     n_gettimer },
+  { "gettimer",     n_gettimer },   /* NOTE: Not defined in time.inc */
   { "delay",        n_delay },
   { "settimestamp", n_settimestamp },
   { "cvttimestamp", n_cvttimestamp },

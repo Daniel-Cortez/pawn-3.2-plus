@@ -38,6 +38,12 @@
   #include <unistd.h>
 #endif
 
+#define EXPECT_PARAMS(num) \
+  do { \
+    if (params[0]!=(num)*sizeof(cell)) \
+      return amx_RaiseError(amx,AMX_ERR_PARAMS),0; \
+  } while(0)
+
 
 #define SRC_BUFSIZE     22
 #define BUFLEN          512
@@ -199,7 +205,9 @@ static cell AMX_NATIVE_CALL n_sendstring(AMX *amx, const cell *params)
   int length;
   cell *cstr;
   char *host, *message, *ptr;
-  short port=AMX_DGRAMPORT;
+  short port;
+
+  EXPECT_PARAMS(2);
 
   if (amx_GetAddr(amx, params[1], &cstr)!=AMX_ERR_NONE) {
 err_native:
@@ -209,7 +217,7 @@ err_native:
   amx_UTF8Len(cstr, &length);
 
   if ((message = alloca(length + 3 + 1)) == NULL)
-    goto err_native;
+    return 0;
   /* insert the byte order mark (BOM) */
   message[0]='\xef';
   message[1]='\xbb';
@@ -227,6 +235,7 @@ err_native:
   amx_StrParam(amx, params[2], host);
   if (host == NULL)
     goto err_native;
+  port=AMX_DGRAMPORT;
   if ((ptr=strchr(host,':'))!=NULL && isdigit(ptr[1])) {
     *ptr++='\0';
     port=(short)atoi(ptr);
@@ -243,7 +252,9 @@ static cell AMX_NATIVE_CALL n_sendpacket(AMX *amx, const cell *params)
 {
   cell *cstr;
   char *host, *ptr;
-  short port=AMX_DGRAMPORT;
+  short port;
+
+  EXPECT_PARAMS(3);
 
   if (amx_GetAddr(amx, params[1], &cstr)!=AMX_ERR_NONE) {
 err_native:
@@ -253,6 +264,7 @@ err_native:
   amx_StrParam(amx, params[3], host);
   if (host == NULL)
     goto err_native;
+  port=AMX_DGRAMPORT;
   if ((ptr=strchr(host,':'))!=NULL && isdigit(ptr[1])) {
     *ptr++='\0';
     port=(short)atoi(ptr);
@@ -266,6 +278,7 @@ err_native:
  */
 static cell AMX_NATIVE_CALL n_listenport(AMX *amx, const cell *params)
 {
+  EXPECT_PARAMS(1);
   (void)amx;
   dgramPort = (short)params[1];
   return 0;

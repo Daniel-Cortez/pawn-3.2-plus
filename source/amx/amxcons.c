@@ -84,6 +84,17 @@
   #pragma clang diagnostic ignored "-Wlogical-op-parentheses"
 #endif
 
+#define EXPECT_PARAMS(num) \
+  do { \
+    if (params[0]!=(num)*sizeof(cell)) \
+      return amx_RaiseError(amx,AMX_ERR_PARAMS),0; \
+  } while(0)
+#define EXPECT_PARAMS_VA(num) \
+  do { \
+    if (params[0]<(num)*sizeof(cell)) \
+      return amx_RaiseError(amx,AMX_ERR_PARAMS),0; \
+  } while(0)
+
 #if defined __MSDOS__
   #define EOL_CHAR       '\r'
 #endif
@@ -302,7 +313,7 @@
      * (indeed, the terminal was that of the alphanumeric display). In xterm (a
      * terminal emulator) we can set the terminal size though, and most
      * terminals that in use today are in fact emulators.
-     * Putty understands this code too, by many others do not.
+     * Putty understands this code too, but many others do not.
      */
     sprintf(str,"\033[8;%d;%dt",lines,columns);
     amx_putstr(str);
@@ -1036,6 +1047,8 @@ static cell AMX_NATIVE_CALL n_print(AMX *amx,const cell *params)
   cell *cstr;
   AMX_FMTINFO info;
 
+  EXPECT_PARAMS(3);
+
   memset(&info,0,sizeof info);
   info.skip= ((size_t)params[0]>=2*sizeof(cell)) ? (int)params[2] : 0;
   info.length= ((size_t)params[0]>=3*sizeof(cell)) ? (int)(params[3]-info.skip) : INT_MAX;
@@ -1056,6 +1069,8 @@ static cell AMX_NATIVE_CALL n_print(AMX *amx,const cell *params)
   cell *cstr;
   int oldcolours;
 
+  EXPECT_PARAMS(4);
+
   CreateConsole();
 
   /* set the new colours */
@@ -1074,10 +1089,13 @@ static cell AMX_NATIVE_CALL n_print(AMX *amx,const cell *params)
 }
 #endif
 
+/* printf(const format[], {Float,Fixed,_}:...) */
 static cell AMX_NATIVE_CALL n_printf(AMX *amx,const cell *params)
 {
   cell *cstr;
   AMX_FMTINFO info;
+
+  EXPECT_PARAMS_VA(1);
 
   memset(&info,0,sizeof info);
   info.params=params+2;
@@ -1100,6 +1118,8 @@ static cell AMX_NATIVE_CALL n_getchar(AMX *amx,const cell *params)
 {
   int c;
 
+  EXPECT_PARAMS(1);
+
   (void)amx;
   CreateConsole();
   c=amx_getch();
@@ -1120,6 +1140,8 @@ static cell AMX_NATIVE_CALL n_getstring(AMX *amx,const cell *params)
   int c,chars,max;
   cell *cptr;
 
+  EXPECT_PARAMS(3);
+
   CreateConsole();
   chars=0;
   max=(int)params[2];
@@ -1129,7 +1151,7 @@ static cell AMX_NATIVE_CALL n_getstring(AMX *amx,const cell *params)
     #else
       TCHAR *str=(TCHAR *)alloca(max*sizeof(TCHAR));
       if (str==NULL)
-        return chars;
+        goto err_native;
     #endif
 
     c=amx_getch();
@@ -1213,11 +1235,14 @@ static int inlist(AMX *amx,int c,const cell *params,int num)
   return 0;
 }
 
+/* getvalue(base=10, term=0x0d, ...) */
 static cell AMX_NATIVE_CALL n_getvalue(AMX *amx,const cell *params)
 {
   cell value;
   int base,sign,c,d;
   int chars,n;
+
+  EXPECT_PARAMS_VA(2);
 
   CreateConsole();
   base=(int)params[1];
@@ -1277,8 +1302,10 @@ static cell AMX_NATIVE_CALL n_getvalue(AMX *amx,const cell *params)
   return sign*value;
 }
 
+/* clrscr() */
 static cell AMX_NATIVE_CALL n_clrscr(AMX *amx,const cell *params)
 {
+  EXPECT_PARAMS(0);
   (void)amx;
   (void)params;
   CreateConsole();
@@ -1286,8 +1313,10 @@ static cell AMX_NATIVE_CALL n_clrscr(AMX *amx,const cell *params)
   return 0;
 }
 
+/* clreol() */
 static cell AMX_NATIVE_CALL n_clreol(AMX *amx,const cell *params)
 {
+  EXPECT_PARAMS(0);
   (void)amx;
   (void)params;
   CreateConsole();
@@ -1295,17 +1324,22 @@ static cell AMX_NATIVE_CALL n_clreol(AMX *amx,const cell *params)
   return 0;
 }
 
+/* gotoxy(x=1,y=1) */
 static cell AMX_NATIVE_CALL n_gotoxy(AMX *amx,const cell *params)
 {
+  EXPECT_PARAMS(2);
   (void)amx;
   CreateConsole();
   return amx_gotoxy((int)params[1],(int)params[2]);
 }
 
+/* wherexy(&x, &y) */
 static cell AMX_NATIVE_CALL n_wherexy(AMX *amx,const cell *params)
 {
   cell *px,*py;
   int x,y;
+
+  EXPECT_PARAMS(2);
 
   CreateConsole();
   amx_wherexy(&x,&y);
@@ -1316,29 +1350,35 @@ err_native:
   } /* if */
   if (amx_GetAddr(amx,params[2],&py)!=AMX_ERR_NONE)
     goto err_native;
-  if (px!=NULL) *px=x;
-  if (py!=NULL) *py=y;
+  *px=x;
+  *py=y;
   return 0;
 }
 
+/* setattr(foreground=-1, background=-1, highlight=-1) */
 static cell AMX_NATIVE_CALL n_setattr(AMX *amx,const cell *params)
 {
+  EXPECT_PARAMS(3);
   (void)amx;
   CreateConsole();
   (void)amx_setattr((int)params[1],(int)params[2],(int)params[3]);
   return 0;
 }
 
+/* consctrl(code, value) */
 static cell AMX_NATIVE_CALL n_consctrl(AMX *amx,const cell *params)
 {
+  EXPECT_PARAMS(2);
   (void)amx;
   CreateConsole();
   (void)amx_termctl((int)params[1],(int)params[2]);
   return 0;
 }
 
+/* console(columns, lines, flags) */
 static cell AMX_NATIVE_CALL n_console(AMX *amx,const cell *params)
 {
+  EXPECT_PARAMS(3);
   (void)amx;
   CreateConsole();
   amx_console((int)params[1],(int)params[2],(int)params[3]);
@@ -1385,8 +1425,8 @@ const AMX_NATIVE_INFO console_Natives[] = {
   { "gotoxy",    n_gotoxy },
   { "wherexy",   n_wherexy },
   { "setattr",   n_setattr },
-  { "console",   n_console },
-  { "consctrl",  n_consctrl },
+  { "console",   n_console },   /* NOTE: Not defined in console.inc */
+  { "consctrl",  n_consctrl },  /* NOTE: Not defined in console.inc */
   { NULL, NULL }        /* terminator */
 };
 

@@ -23,6 +23,12 @@
 #include <math.h>
 #include "amx.h"
 
+#define EXPECT_PARAMS(num) \
+  do { \
+    if (params[0]!=(num)*sizeof(cell)) \
+      return amx_RaiseError(amx,AMX_ERR_PARAMS),0; \
+  } while(0)
+
 /*
   #if defined __BORLANDC__
     #pragma resource "amxFloat.res"
@@ -61,6 +67,8 @@ static cell AMX_NATIVE_CALL n_float(AMX *amx,const cell *params)
     */
     REAL fValue;
 
+    EXPECT_PARAMS(1);
+
     (void)amx;
     /* Convert to a float. Calls the compilers long to float conversion. */
     fValue = (REAL)params[1];
@@ -75,7 +83,15 @@ static cell AMX_NATIVE_CALL n_float(AMX *amx,const cell *params)
  */
 static cell AMX_NATIVE_CALL n_floatint(AMX *amx,const cell *params)
 {
-    REAL fA = amx_ctof(params[1]);
+    /*
+    *   params[0] = number of bytes
+    *   params[1] = float operand
+    */
+    REAL fA;
+
+    EXPECT_PARAMS(1);
+
+    fA = amx_ctof(params[1]);
     if (fA >= 0.0)
         fA = (REAL)(floor((double)fA));
     else
@@ -96,7 +112,8 @@ static cell AMX_NATIVE_CALL n_strfloat(AMX *amx,const cell *params)
     REAL fNum;
     int nLen;
 
-    (void)amx;
+    EXPECT_PARAMS(1);
+
     /* They should have sent us 1 cell. */
     assert(params[0]/sizeof(cell) == 1);
 
@@ -126,7 +143,11 @@ static cell AMX_NATIVE_CALL n_floatmul(AMX *amx,const cell *params)
     *   params[1] = float operand 1
     *   params[2] = float operand 2
     */
-    REAL fRes = amx_ctof(params[1]) * amx_ctof(params[2]);
+    REAL fRes;
+
+    EXPECT_PARAMS(2);
+
+    fRes = amx_ctof(params[1]) * amx_ctof(params[2]);
     (void)amx;
     return amx_ftoc(fRes);
 }
@@ -139,7 +160,11 @@ static cell AMX_NATIVE_CALL n_floatdiv(AMX *amx,const cell *params)
     *   params[1] = float dividend (top)
     *   params[2] = float divisor (bottom)
     */
-    REAL fRes = amx_ctof(params[1]) / amx_ctof(params[2]);
+    REAL fRes;
+
+    EXPECT_PARAMS(2);
+
+    fRes = amx_ctof(params[1]) / amx_ctof(params[2]);
     (void)amx;
     return amx_ftoc(fRes);
 }
@@ -152,7 +177,11 @@ static cell AMX_NATIVE_CALL n_floatadd(AMX *amx,const cell *params)
     *   params[1] = float operand 1
     *   params[2] = float operand 2
     */
-    REAL fRes = amx_ctof(params[1]) + amx_ctof(params[2]);
+    REAL fRes;
+
+    EXPECT_PARAMS(2);
+
+    fRes = amx_ctof(params[1]) + amx_ctof(params[2]);
     (void)amx;
     return amx_ftoc(fRes);
 }
@@ -165,7 +194,11 @@ static cell AMX_NATIVE_CALL n_floatsub(AMX *amx,const cell *params)
     *   params[1] = float operand 1
     *   params[2] = float operand 2
     */
-    REAL fRes = amx_ctof(params[1]) - amx_ctof(params[2]);
+    REAL fRes;
+
+    EXPECT_PARAMS(2);
+
+    fRes = amx_ctof(params[1]) - amx_ctof(params[2]);
     (void)amx;
     return amx_ftoc(fRes);
 }
@@ -178,7 +211,11 @@ static cell AMX_NATIVE_CALL n_floatfract(AMX *amx,const cell *params)
     *   params[0] = number of bytes
     *   params[1] = float operand
     */
-    REAL fA = amx_ctof(params[1]);
+    REAL fA;
+
+    EXPECT_PARAMS(1);
+
+    fA = amx_ctof(params[1]);
     fA = fA - (REAL)(floor((double)fA));
     (void)amx;
     return amx_ftoc(fA);
@@ -193,9 +230,12 @@ static cell AMX_NATIVE_CALL n_floatround(AMX *amx,const cell *params)
     *   params[1] = float operand
     *   params[2] = Type of rounding (integer)
     */
-    REAL fA = amx_ctof(params[1]);
+    REAL fA;
+
+    EXPECT_PARAMS(2);
 
     (void)amx;
+    fA = amx_ctof(params[1]);
     switch ((int)params[2])
     {
         case floatround_floor:  /* round downwards */
@@ -228,6 +268,8 @@ static cell AMX_NATIVE_CALL n_floatcmp(AMX *amx,const cell *params)
     */
     REAL fA, fB;
 
+    EXPECT_PARAMS(2);
+
     (void)amx;
     fA = amx_ctof(params[1]);
     fB = amx_ctof(params[2]);
@@ -246,7 +288,11 @@ static cell AMX_NATIVE_CALL n_floatsqroot(AMX *amx,const cell *params)
     *   params[0] = number of bytes
     *   params[1] = float operand
     */
-    REAL fA = amx_ctof(params[1]);
+    REAL fA;
+
+    EXPECT_PARAMS(1);
+
+    fA = amx_ctof(params[1]);
     fA = (REAL)sqrt(fA);
     if (fA < 0.0)
         return amx_RaiseError(amx, AMX_ERR_DOMAIN), 0;
@@ -261,8 +307,12 @@ static cell AMX_NATIVE_CALL n_floatpower(AMX *amx,const cell *params)
     *   params[1] = float operand 1 (base)
     *   params[2] = float operand 2 (exponent)
     */
-    REAL fA = amx_ctof(params[1]);
-    REAL fB = amx_ctof(params[2]);
+    REAL fA, fB;
+
+    EXPECT_PARAMS(2);
+
+    fA = amx_ctof(params[1]);
+    fB = amx_ctof(params[2]);
     fA = (REAL)pow(fA, fB);
     (void)amx;
     return amx_ftoc(fA);
@@ -276,9 +326,12 @@ static cell AMX_NATIVE_CALL n_floatlog(AMX *amx,const cell *params)
     *   params[1] = float operand 1 (value)
     *   params[2] = float operand 2 (base)
     */
-    REAL fValue = amx_ctof(params[1]);
-    REAL fBase = amx_ctof(params[2]);
-    (void)amx;
+    REAL fValue, fBase;
+
+    EXPECT_PARAMS(2);
+
+    fValue = amx_ctof(params[1]);
+    fBase = amx_ctof(params[2]);
     if (fValue <= 0.0 || fBase <= 0)
         return amx_RaiseError(amx, AMX_ERR_DOMAIN), 0;
     if (fBase == 10.0) // ??? epsilon
@@ -309,7 +362,11 @@ static cell AMX_NATIVE_CALL n_floatsin(AMX *amx,const cell *params)
     *   params[1] = float operand 1 (angle)
     *   params[2] = float operand 2 (radix)
     */
-    REAL fA = amx_ctof(params[1]);
+    REAL fA;
+
+    EXPECT_PARAMS(2);
+
+    fA = amx_ctof(params[1]);
     fA = ToRadians(fA, params[2]);
     fA = (float)sin(fA);
     (void)amx;
@@ -324,7 +381,11 @@ static cell AMX_NATIVE_CALL n_floatcos(AMX *amx,const cell *params)
     *   params[1] = float operand 1 (angle)
     *   params[2] = float operand 2 (radix)
     */
-    REAL fA = amx_ctof(params[1]);
+    REAL fA;
+
+    EXPECT_PARAMS(2);
+
+    fA = amx_ctof(params[1]);
     fA = ToRadians(fA, params[2]);
     fA = (float)cos(fA);
     (void)amx;
@@ -339,7 +400,11 @@ static cell AMX_NATIVE_CALL n_floattan(AMX *amx,const cell *params)
     *   params[1] = float operand 1 (angle)
     *   params[2] = float operand 2 (radix)
     */
-    REAL fA = amx_ctof(params[1]);
+    REAL fA;
+
+    EXPECT_PARAMS(2);
+
+    fA = amx_ctof(params[1]);
     fA = ToRadians(fA, params[2]);
     fA = (float)tan(fA);
     (void)amx;
@@ -349,7 +414,15 @@ static cell AMX_NATIVE_CALL n_floattan(AMX *amx,const cell *params)
 /******************************************************************/
 static cell AMX_NATIVE_CALL n_floatabs(AMX *amx,const cell *params)
 {
-    REAL fA = amx_ctof(params[1]);
+    /*
+    *   params[0] = number of bytes
+    *   params[1] = float operand
+    */
+    REAL fA;
+
+    EXPECT_PARAMS(1);
+
+    fA = amx_ctof(params[1]);
     fA = (fA >= 0) ? fA : -fA;
     (void)amx;
     return amx_ftoc(fA);

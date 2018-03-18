@@ -82,6 +82,16 @@
   #define AMXARGS_SKIPARG 0
 #endif
 
+#if defined __clang__
+  #pragma clang diagnostic ignored "-Wlogical-op-parentheses"
+#endif
+
+#define EXPECT_PARAMS(num) \
+  do { \
+    if (params[0]!=(num)*sizeof(cell)) \
+      return amx_RaiseError(amx,AMX_ERR_PARAMS),0; \
+  } while(0)
+
 
 static const TCHAR *tokenize(const TCHAR *string, int index, int *length);
 static const TCHAR *cmdline = NULL;
@@ -241,17 +251,20 @@ static int verify_addr(AMX *amx, cell addr)
 }
 
 
-/* bool: argindex(index, value[], maxlength=sizeof value, bool:pack=false)
+/* bool: argindex(index, value[], maxlength = sizeof value, bool: pack = false)
  * returns true if the option was found and false on error or if the parameter "index" is out of range
  */
 static cell AMX_NATIVE_CALL n_argindex(AMX *amx, const cell *params)
 {
-  const TCHAR *cmdline = rawcmdline();
+  const TCHAR *cmdline;
   const TCHAR *option;
   int length, max;
   TCHAR *str;
   cell *cptr;
 
+  EXPECT_PARAMS(4);
+
+  cmdline = rawcmdline();
   max = (int)params[3];
   if (max <= 0)
     return 0;
@@ -260,7 +273,7 @@ err_native:
     amx_RaiseError(amx, AMX_ERR_NATIVE);
     return 0;
   } /* if */
-  if (params[3] <= (cell)0 || verify_addr(amx, params[2]+params[3]) != AMX_ERR_NONE)
+  if (params[3] <= (cell)0 || verify_addr(amx, params[2] + params[3]) != AMX_ERR_NONE)
     goto err_native;
 
   if ((option = tokenize(cmdline, params[1], &length)) == NULL) {
@@ -273,11 +286,8 @@ err_native:
     max *= sizeof(cell);
   if (max > length + 1)
     max = length + 1;
-  str = (TCHAR *)alloca(max*sizeof(TCHAR));
-  if (str == NULL) {
-    amx_RaiseError(amx, AMX_ERR_NATIVE);
-    return 0;
-  } /* if */
+  if ((str = (TCHAR *)alloca(max * sizeof(TCHAR))) == NULL)
+    goto err_native;
   memcpy(str, option, (max - 1) * sizeof(TCHAR));
   str[max - 1] = __T('\0');
   amx_SetString(cptr, (char*)str, (int)params[4], sizeof(TCHAR)>1, max);
@@ -285,7 +295,7 @@ err_native:
   return 1;
 }
 
-/* bool: argstr(index=0, const option[]="", value[]="", maxlength=sizeof value, bool:pack=false)
+/* bool: argstr(index = 0, const option[] = "", value[] = "", maxlength = sizeof value, bool: pack = false)
  * returns true if the option was found and false otherwise
  */
 static cell AMX_NATIVE_CALL n_argstr(AMX *amx, const cell *params)
@@ -294,6 +304,8 @@ static cell AMX_NATIVE_CALL n_argstr(AMX *amx, const cell *params)
   int length, max;
   TCHAR *str;
   cell *cptr;
+
+  EXPECT_PARAMS(5);
 
   max = (int)params[4];
   if (max <= 0)
@@ -306,7 +318,7 @@ err_native:
   } /* if */
   if (amx_GetAddr(amx, params[3], &cptr) != AMX_ERR_NONE)
     goto err_native;
-  if (params[4] <= (cell)0 || verify_addr(amx, params[3]+params[4]) != AMX_ERR_NONE)
+  if (params[4] <= (cell)0 || verify_addr(amx, params[3] + params[4]) != AMX_ERR_NONE)
     goto err_native;
 
   option = matcharg(key, (int)params[1], &length);
@@ -323,8 +335,7 @@ err_native:
       max *= sizeof(cell);
     if (max > length + 1)
       max = length + 1;
-    str = (TCHAR *)alloca(max*sizeof(TCHAR));
-    if (str == NULL) {
+    if ((str = (TCHAR *)alloca(max * sizeof(TCHAR))) == NULL) {
       amx_RaiseError(amx, AMX_ERR_NATIVE);
       return 0;
     } /* if */
@@ -336,7 +347,7 @@ err_native:
   return 1;
 }
 
-/* bool: argvalue(index=0, const option[]="", &value=cellmin)
+/* bool: argvalue(index = 0, const option[] = "", &value = cellmin)
  * returns true if the option was found and false otherwise
  */
 static cell AMX_NATIVE_CALL n_argvalue(AMX *amx, const cell *params)
@@ -344,6 +355,8 @@ static cell AMX_NATIVE_CALL n_argvalue(AMX *amx, const cell *params)
   const TCHAR *option, *key;
   int length;
   cell *cptr;
+
+  EXPECT_PARAMS(3);
 
   amx_StrParam(amx, params[2], key);
   if (key == NULL) {
@@ -368,10 +381,13 @@ err_native:
 /* argcount() */
 static cell AMX_NATIVE_CALL n_argcount(AMX *amx, const cell *params)
 {
-  const TCHAR *cmdline = rawcmdline();
-  cell count = 0;
-  while (tokenize(cmdline, count, NULL) != NULL)
-    count++;
+  const TCHAR *cmdline;
+  cell count;
+
+  EXPECT_PARAMS(0);
+
+  cmdline = rawcmdline();
+  for (count = 0; tokenize(cmdline, count, NULL) != NULL; count++) {}
   (void)amx;
   (void)params;
   return count;
