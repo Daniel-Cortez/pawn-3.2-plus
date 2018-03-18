@@ -129,6 +129,12 @@
   #pragma clang diagnostic ignored "-Wlogical-op-parentheses"
 #endif
 
+#define EXPECT_PARAMS(num) \
+  do { \
+    if (params[0]!=(num)*sizeof(cell)) \
+      return amx_RaiseError(amx,AMX_ERR_PARAMS),0; \
+  } while(0)
+
 enum filemode {
   io_read,      /* file must exist */
   io_write,     /* creates a new file */
@@ -460,12 +466,14 @@ static int verify_addr(AMX *amx,cell addr)
   return amx_GetAddr(amx,addr,&cdest);
 }
 
-/* File: fopen(const name[], filemode: mode) */
+/* File: fopen(const name[], filemode: mode = io_readwrite) */
 static cell AMX_NATIVE_CALL n_fopen(AMX *amx, const cell *params)
 {
   TCHAR *attrib,*altattrib;
   TCHAR *name,fullname[_MAX_PATH];
-  FILE *f = NULL;
+  FILE *f;
+
+  EXPECT_PARAMS(2);
 
   altattrib=NULL;
   switch (params[2] & 0x7fff) {
@@ -488,17 +496,22 @@ static cell AMX_NATIVE_CALL n_fopen(AMX *amx, const cell *params)
 
   /* get the filename */
   amx_StrParam(amx,params[1],name);
-  if (name!=NULL && completename(fullname,name,sizearray(fullname))!=NULL) {
-    f=_tfopen(fullname,attrib);
-    if (f==NULL && altattrib!=NULL)
-      f=_tfopen(fullname,altattrib);
+  if (name==NULL) {
+    amx_RaiseError(amx,AMX_ERR_NATIVE);
+    return 0;
   } /* if */
+  if (completename(fullname,name,sizearray(fullname))==NULL)
+    return 0;
+  f=_tfopen(fullname,attrib);
+  if (f==NULL && altattrib!=NULL)
+    f=_tfopen(fullname,altattrib);
   return (cell)f;
 }
 
-/* fclose(File: handle) */
+/* bool: fclose(File: handle) */
 static cell AMX_NATIVE_CALL n_fclose(AMX *amx, const cell *params)
 {
+  EXPECT_PARAMS(1);
   UNUSED_PARAM(amx);
   return fclose((FILE*)params[1]) == 0;
 }
@@ -506,12 +519,14 @@ static cell AMX_NATIVE_CALL n_fclose(AMX *amx, const cell *params)
 /* fwrite(File: handle, const string[]) */
 static cell AMX_NATIVE_CALL n_fwrite(AMX *amx, const cell *params)
 {
-  int r = 0;
   cell *cptr;
   char *str;
   int len;
 
+  EXPECT_PARAMS(2);
+
   if (amx_GetAddr(amx,params[2],&cptr)!=AMX_ERR_NONE) {
+err_native:
     amx_RaiseError(amx,AMX_ERR_NATIVE);
     return 0;
   } /* if */
@@ -521,22 +536,23 @@ static cell AMX_NATIVE_CALL n_fwrite(AMX *amx, const cell *params)
 
   if ((ucell)*cptr>UNPACKEDMAX) {
     /* the string is packed, write it as an ASCII/ANSI string */
-    if ((str=(char*)alloca(len + 1))!=NULL) {
-      amx_GetString(str,cptr,0,len);
-      r=fputs(str,(FILE*)params[1]);
-    } /* if */
-  } else {
-    /* the string is unpacked, write it as UTF-8 */
-    r=fputs_cell((FILE*)params[1],cptr,1);
+    if ((str=(char*)alloca(len+1))==NULL)
+      goto err_native;
+    amx_GetString(str,cptr,0,len);
+    return fputs(str,(FILE*)params[1]);
   } /* if */
-  return r;
+  /* the string is unpacked, write it as UTF-8 */
+  return fputs_cell((FILE*)params[1],cptr,1);
 }
 
-/* fread(File: handle, string[], size=sizeof string, bool:pack=false) */
+/* fread(File: handle, string[], size = sizeof string, bool: pack = false) */
 static cell AMX_NATIVE_CALL n_fread(AMX *amx, const cell *params)
 {
   int chars,max;
   cell *cptr;
+  char *str;
+
+  EXPECT_PARAMS(4);
 
   max=(int)params[3];
   if (max<=0)
@@ -553,8 +569,7 @@ err_native:
     goto err_native;
 
   if (params[4]) {
-    char *str=(char *)alloca(max);
-    if (str==NULL)
+    if ((str=(char *)alloca(max))==NULL)
       goto err_native;
     /* store as packed string, read an ASCII/ANSI string */
     chars=fgets_char((FILE*)params[1],str,max);
@@ -569,9 +584,10 @@ err_native:
   return chars;
 }
 
-/* fputchar(File: handle, value, bool:utf8 = true) */
+/* bool: fputchar(File: handle, value, bool: utf8 = true) */
 static cell AMX_NATIVE_CALL n_fputchar(AMX *amx, const cell *params)
 {
+  EXPECT_PARAMS(3);
   UNUSED_PARAM(amx);
   if (params[3]) {
     size_t result;
@@ -586,11 +602,13 @@ static cell AMX_NATIVE_CALL n_fputchar(AMX *amx, const cell *params)
   return 1;
 }
 
-/* fgetchar(File: handle, bool:utf8 = true) */
+/* fgetchar(File: handle, bool: utf8 = true) */
 static cell AMX_NATIVE_CALL n_fgetchar(AMX *amx, const cell *params)
 {
   cell str[2];
   size_t result;
+
+  EXPECT_PARAMS(2);
 
   UNUSED_PARAM(amx);
   if (params[2]) {
@@ -616,33 +634,37 @@ static cell AMX_NATIVE_CALL n_fgetchar(AMX *amx, const cell *params)
   #error Unsupported cell size
 #endif
 
-/* fblockwrite(File: handle, buffer[], size=sizeof buffer) */
+/* fblockwrite(File: handle, const buffer[], size = sizeof buffer) */
 static cell AMX_NATIVE_CALL n_fblockwrite(AMX *amx, const cell *params)
 {
   cell *cptr;
-  cell count;
+  cell count,max;
+
+  EXPECT_PARAMS(3);
 
   if (amx_GetAddr(amx,params[2],&cptr)!=AMX_ERR_NONE) {
+err_native:
     amx_RaiseError(amx,AMX_ERR_NATIVE);
     return 0;
   } /* if */
-  if (cptr!=NULL) {
-    cell max=params[3];
-    ucell v;
-    for (count=0; count<max; count++) {
-      v=(ucell)*cptr++;
-      if (fwrite(aligncell(&v),sizeof(cell),1,(FILE*)params[1])!=1)
-        break;          /* write error */
-    } /* for */
-  } /* if */
+  if (params[3]<=(cell)0 || verify_addr(amx,params[2]+params[3])!=AMX_ERR_NONE)
+    goto err_native;
+  max=params[3];
+  for (count=0; count<max; count++) {
+    ucell v=(ucell)*cptr++;
+    if (fwrite(aligncell(&v),sizeof(cell),1,(FILE*)params[1])!=1)
+      break;          /* write error */
+  } /* for */
   return count;
 }
 
-/* fblockread(File: handle, buffer[], size=sizeof buffer) */
+/* fblockread(File: handle, buffer[], size = sizeof buffer) */
 static cell AMX_NATIVE_CALL n_fblockread(AMX *amx, const cell *params)
 {
   cell *cptr;
   cell count,max;
+
+  EXPECT_PARAMS(3);
 
   if (amx_GetAddr(amx,params[2],&cptr)!=AMX_ERR_NONE) {
 err_native:
@@ -664,15 +686,19 @@ err_native:
 /* File: ftemp() */
 static cell AMX_NATIVE_CALL n_ftemp(AMX *amx, const cell *params)
 {
+  EXPECT_PARAMS(0);
   UNUSED_PARAM(amx);
   UNUSED_PARAM(params);
   return (cell)tmpfile();
 }
 
-/* fseek(File: handle, position, seek_whence: whence=seek_start) */
+/* fseek(File: handle, position = 0, seek_whence: whence = seek_start) */
 static cell AMX_NATIVE_CALL n_fseek(AMX *amx, const cell *params)
 {
   int whence;
+
+  EXPECT_PARAMS(3);
+
   switch (params[3]) {
   case seek_start:
     whence=SEEK_SET;
@@ -697,11 +723,17 @@ static cell AMX_NATIVE_CALL n_fremove(AMX *amx, const cell *params)
 {
   TCHAR *name,fullname[_MAX_PATH];
 
+  EXPECT_PARAMS(1);
+
   amx_StrParam(amx,params[1],name);
-  if (name!=NULL && completename(fullname,name,sizearray(fullname))!=NULL) {
+  if (name==NULL) {
+    amx_RaiseError(amx,AMX_ERR_NATIVE);
+    return 0;
+  } /* if */
+  if (completename(fullname,name,sizearray(fullname))!=NULL) {
     struct stat stbuf;
     if (_tstat(fullname,&stbuf)==0)
-      return ((((stbuf.st_mode & S_IFDIR)!=0) ? _trmdir(fullname) : _tremove(fullname))==0) ? 1 : 0;
+      return (((stbuf.st_mode & S_IFDIR)!=0) ? _trmdir(fullname) : _tremove(fullname))==0;
   } /* if */
   return 0;
 }
@@ -709,16 +741,24 @@ static cell AMX_NATIVE_CALL n_fremove(AMX *amx, const cell *params)
 /* bool: frename(const oldname[], const newname[]) */
 static cell AMX_NATIVE_CALL n_frename(AMX *amx, const cell *params)
 {
-  int r=1;
   TCHAR *name,oldname[_MAX_PATH],newname[_MAX_PATH];
 
+  EXPECT_PARAMS(2);
+
   amx_StrParam(amx,params[1],name);
-  if (name!=NULL && completename(oldname,name,sizearray(oldname))!=NULL) {
-    amx_StrParam(amx,params[2],name);
-    if (name!=NULL && completename(newname,name,sizearray(newname))!=NULL)
-      r=_trename(oldname,newname);
+  if (name==NULL) {
+err_native:
+    amx_RaiseError(amx,AMX_ERR_NATIVE);
+    return 0;
   } /* if */
-  return r==0;
+  if (completename(oldname,name,sizearray(oldname))==NULL)
+    return 0;
+  amx_StrParam(amx,params[2],name);
+  if (name==NULL)
+    goto err_native;
+  if (completename(newname,name,sizearray(newname))==NULL)
+    return 0;
+  return _trename(oldname,newname)==0;
 }
 
 /* bool: fcopy(const source[], const target[]) */
@@ -726,79 +766,94 @@ static cell AMX_NATIVE_CALL n_fcopy(AMX *amx, const cell *params)
 {
   TCHAR *name,source[_MAX_PATH],target[_MAX_PATH];
 
+  EXPECT_PARAMS(2);
+
   amx_StrParam(amx,params[1],name);
-  if (name!=NULL && completename(source,name,sizearray(source))!=NULL) {
-    amx_StrParam(amx,params[2],name);
-    if (name!=NULL && completename(target,name,sizearray(target))!=NULL) {
-      #if defined _Windows
-        return (CopyFile(source,target,FALSE)!=FALSE) ? 1 : 0;
-      #elif defined HAVE_UNISTD_H && defined HAVE_FCNTL_H /* POSIX way */
-        cell result=0;
-        int fsrc=0,ftgt=0;
-        ssize_t numbytes;
-        if ((fsrc=open(source,O_RDONLY,0))==-1)
-          goto ret;
-        if ((ftgt=open(target,(O_WRONLY | O_CREAT | O_TRUNC),(S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH)))==-1)
-          goto ret;
-        #if defined HAVE_SYS_SENDFILE_H
-          do {
-            struct stat stbuf;
-            _tstat(source,&stbuf);
-            numbytes=sendfile(ftgt,fsrc,NULL,stbuf.st_size);
-            if (numbytes!=-1) {
-              result=1;
-              goto ret;
-            } /* if */
-          } while (0);
-          /* fallback to read()/write() */
-        #endif
+  if (name==NULL) {
+err_native:
+    amx_RaiseError(amx,AMX_ERR_NATIVE);
+    return 0;
+  } /* if */
+  if (completename(source,name,sizearray(source))==NULL)
+    return 0;
+  amx_StrParam(amx,params[2],name);
+  if (name==NULL)
+    goto err_native;
+  if (completename(target,name,sizearray(target))!=NULL) {
+    #if defined _Windows
+      return (CopyFile(source,target,FALSE)!=FALSE) ? 1 : 0;
+    #elif defined HAVE_UNISTD_H && defined HAVE_FCNTL_H /* POSIX way */
+      cell result=0;
+      int fsrc=-1,ftgt=-1;
+      ssize_t numbytes;
+      if ((fsrc=open(source,O_RDONLY,0))==-1)
+        goto ret;
+      if ((ftgt=open(target,(O_WRONLY | O_CREAT | O_TRUNC),(S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH)))==-1)
+        goto ret;
+      #if defined HAVE_SYS_SENDFILE_H
         do {
-          char buf[BUFSIZ];
-          while ((numbytes=read(fsrc,buf,sizeof(buf)))>0)
-            if (write(ftgt,buf,(size_t)numbytes)!=numbytes)
-              goto ret;
-        } while (0);
-        if (numbytes==-1)
-          goto ret;
-        result=1;
-      ret:
-        if (fsrc!=0)
-          close(fsrc);
-        if (ftgt!=0)
-          close(ftgt);
-        return result;
-      #else /* Plain ANSI C way */
-        cell result=0;
-        FILE *fsrc,*ftgt;
-        char buf[BUFSIZ];
-        size_t numbytes;
-        if ((fsrc=fopen(source,"rb"))==NULL)
-          goto ret;
-        if ((ftgt=fopen(target,"wb"))==NULL)
-          goto ret;
-        while ((numbytes=fread(buf,1,sizeof(buf),fsrc))!=0)
-          if (fwrite(buf,1,numbytes,ftgt)!=numbytes)
+          struct stat stbuf;
+          _tstat(source,&stbuf);
+          numbytes=sendfile(ftgt,fsrc,NULL,stbuf.st_size);
+          if (numbytes!=-1) {
+            result=1;
             goto ret;
-        result=1;
-      ret:
-        if (fsrc!=NULL)
-          fclose(fsrc);
-        if (ftgt!=NULL)
-          fclose(ftgt);
-        return result;
+          } /* if */
+        } while (0);
+        /* fallback to read()/write() */
       #endif
-    } /* if */
+      do {
+        char buf[BUFSIZ];
+        while ((numbytes=read(fsrc,buf,sizeof(buf)))>0)
+          if (write(ftgt,buf,(size_t)numbytes)!=numbytes)
+            goto ret;
+      } while (0);
+      if (numbytes==-1)
+        goto ret;
+      result=1;
+    ret:
+      if (fsrc!=-1)
+        close(fsrc);
+      if (ftgt!=-1)
+        close(ftgt);
+      return result;
+   #else /* Plain ANSI C way */
+      cell result=0;
+      FILE *fsrc,*ftgt;
+      char buf[BUFSIZ];
+     size_t numbytes;
+      if ((fsrc=fopen(source,"rb"))==NULL)
+        goto ret;
+      if ((ftgt=fopen(target,"wb"))==NULL)
+        goto ret;
+     while ((numbytes=fread(buf,1,sizeof(buf),fsrc))!=0)
+        if (fwrite(buf,1,numbytes,ftgt)!=numbytes)
+          goto ret;
+      result=1;
+    ret:
+      if (fsrc!=NULL)
+        fclose(fsrc);
+      if (ftgt!=NULL)
+        fclose(ftgt);
+      return result;
+    #endif
   } /* if */
   return 0;
 }
 
-/* bool: fcreatedir(const name[]); */
+/* bool: fcreatedir(const name[]) */
 static cell AMX_NATIVE_CALL n_fcreatedir(AMX *amx, const cell *params)
 {
   TCHAR *name,fname[_MAX_PATH];
 
+  EXPECT_PARAMS(1);
+
   amx_StrParam(amx,params[1],name);
-  if (name==NULL || completename(fname,name,sizearray(fname))==NULL)
+  if (name==NULL) {
+    amx_RaiseError(amx,AMX_ERR_NATIVE);
+    return 0;
+  } /* if */
+  if (completename(fname,name,sizearray(fname))==NULL)
     return 0;
   #if defined _Windows || defined __MSDOS__
     return (_tmkdir(fname)==0) ? 1 : 0;
@@ -811,7 +866,11 @@ static cell AMX_NATIVE_CALL n_fcreatedir(AMX *amx, const cell *params)
 static cell AMX_NATIVE_CALL n_flength(AMX *amx, const cell *params)
 {
   long l,c;
-  int fn=fileno((FILE*)params[1]);
+  int fn;
+
+  EXPECT_PARAMS(1);
+
+  fn=fileno((FILE*)params[1]);
   c=lseek(fn,0,SEEK_CUR); /* save the current position */
   l=lseek(fn,0,SEEK_END); /* return the file position at its end */
   lseek(fn,c,SEEK_SET);   /* restore the file pointer */
@@ -888,46 +947,54 @@ static int matchfiles(const TCHAR *path,int skip,TCHAR *out,int outlen)
 /* fexist(const pattern[]) */
 static cell AMX_NATIVE_CALL n_fexist(AMX *amx, const cell *params)
 {
-  int r=0;
   TCHAR *name,fullname[_MAX_PATH];
 
+  EXPECT_PARAMS(1);
+
   amx_StrParam(amx,params[1],name);
-  if (name!=NULL && completename(fullname,name,sizearray(fullname))!=NULL)
-    r=matchfiles(fullname,0,NULL,0);
-  return r;
+  if (name==NULL) {
+    amx_RaiseError(amx,AMX_ERR_NATIVE);
+    return 0;
+  } /* if */
+  if (completename(fullname,name,sizearray(fullname))==NULL)
+    return 0;
+  return matchfiles(fullname,0,NULL,0);
 }
 
-/* bool: fmatch(filename[], const pattern[], index=0, maxlength=sizeof filename) */
+/* bool: fmatch(name[], const pattern[], index = 0, size = sizeof name) */
 static cell AMX_NATIVE_CALL n_fmatch(AMX *amx, const cell *params)
 {
-  TCHAR *name,fullname[_MAX_PATH]="";
+  TCHAR *name,fullname[_MAX_PATH];
   cell *cptr;
 
+  EXPECT_PARAMS(4);
+
   amx_StrParam(amx,params[2],name);
-  if (name!=NULL && completename(fullname,name,sizearray(fullname))!=NULL) {
-    if (!matchfiles(fullname,params[3],fullname,sizearray(fullname))) {
-      fullname[0]='\0';
-    } else {
-      /* copy the string into the destination */
-      if (amx_GetAddr(amx,params[1],&cptr)!=AMX_ERR_NONE) {
+  if (name==NULL) {
 err_native:
-        amx_RaiseError(amx,AMX_ERR_NATIVE);
-        return 0;
-      } /* if */
-      if (params[4]<=(cell)0 || verify_addr(amx,params[1]+params[4])!=AMX_ERR_NONE)
-        goto err_native;
-      amx_SetString(cptr,fullname,1,0,params[4]);
-    } /* if */
+    amx_RaiseError(amx,AMX_ERR_NATIVE);
+    return 0;
   } /* if */
-  return fullname[0]!='\0';
+  if (completename(fullname,name,sizearray(fullname))==NULL)
+    return 0;
+  if (!matchfiles(fullname,params[3],fullname,sizearray(fullname)))
+    return 0;
+  /* copy the string into the destination */
+  if (amx_GetAddr(amx,params[1],&cptr)!=AMX_ERR_NONE)
+    goto err_native;
+  if (params[4]<=(cell)0 || verify_addr(amx,params[1]+params[4])!=AMX_ERR_NONE)
+    goto err_native;
+  amx_SetString(cptr,fullname,1,0,params[4]);
+  return 1;
 }
 
 /* bool: fstat(const name[], &size = 0, &timestamp = 0, &mode = 0, &inode = 0) */
 static cell AMX_NATIVE_CALL n_fstat(AMX *amx, const cell *params)
 {
-  TCHAR *name,fullname[_MAX_PATH]="";
+  TCHAR *name,fullname[_MAX_PATH];
   cell *cptr;
-  int result=0;
+
+  EXPECT_PARAMS(5);
 
   amx_StrParam(amx,params[1],name);
   if (name==NULL) {
@@ -937,36 +1004,39 @@ err_native:
   } /* if */
   if (completename(fullname,name,sizearray(fullname))!=NULL) {
     struct stat stbuf;
-    if (_tstat(name, &stbuf)==0) {
-      if (amx_GetAddr(amx,params[2],&cptr)!=AMX_ERR_NONE)
-        goto err_native;
-      *cptr=stbuf.st_size;
-      if (amx_GetAddr(amx,params[3],&cptr)!=AMX_ERR_NONE)
-        goto err_native;
-      *cptr=(cell)stbuf.st_mtime;
-      if (amx_GetAddr(amx,params[4],&cptr)!=AMX_ERR_NONE)
-        goto err_native;
-      *cptr=stbuf.st_mode;  /* mode/protection bits */
-      if (amx_GetAddr(amx,params[5],&cptr)!=AMX_ERR_NONE)
-        goto err_native;
-      *cptr=stbuf.st_ino;   /* inode number, unique id for a file */
-      result=1;
-    } /* if */
+    if (_tstat(name,&stbuf)!=0)
+      return 0;
+    if (amx_GetAddr(amx,params[2],&cptr)!=AMX_ERR_NONE)
+      goto err_native;
+    *cptr=stbuf.st_size;
+    if (amx_GetAddr(amx,params[3],&cptr)!=AMX_ERR_NONE)
+      goto err_native;
+    *cptr=(cell)stbuf.st_mtime;
+    if (amx_GetAddr(amx,params[4],&cptr)!=AMX_ERR_NONE)
+      goto err_native;
+    *cptr=stbuf.st_mode;    /* mode/protection bits */
+    if (amx_GetAddr(amx,params[5],&cptr)!=AMX_ERR_NONE)
+      goto err_native;
+    *cptr=stbuf.st_ino;     /* inode number, unique id for a file */
+    return 1;
   } /* if */
-  return result;
+  return 0;
 }
 
 /* bool: fattrib(const name[], timestamp=0, attrib=0x0f) */
 static cell AMX_NATIVE_CALL n_fattrib(AMX *amx, const cell *params)
 {
-  TCHAR *name,fullname[_MAX_PATH]="";
-  int result=0;
+  TCHAR *name,fullname[_MAX_PATH];
+  int result;
+
+  EXPECT_PARAMS(3);
 
   amx_StrParam(amx,params[1],name);
   if (name==NULL) {
     amx_RaiseError(amx,AMX_ERR_NATIVE);
     return 0;
   } /* if */
+  result=0;
   if (completename(fullname,name,sizearray(fullname))!=NULL) {
     result=1;
     if (params[2]!=0) {
@@ -1070,20 +1140,25 @@ static cell AMX_NATIVE_CALL n_filecrc(AMX *amx, const cell *params)
   TCHAR *name,fullname[_MAX_PATH]="";
   FILE *fp;
   unsigned char buffer[256];
-  unsigned long ulCRC = 0xffffffff;
+  unsigned long ulCRC;
   int numread;
 
+  EXPECT_PARAMS(1);
+
   amx_StrParam(amx,params[1],name);
-  if (name!=NULL && completename(fullname,name,sizearray(fullname))!=NULL
-      && (fp=_tfopen(fullname,"rb"))!=NULL)
-  {
+  if (name==NULL) {
+    amx_RaiseError(amx,AMX_ERR_NATIVE);
+    return 0;
+  } /* if */
+  ulCRC=0xffffffff;
+  if (completename(fullname,name,sizearray(fullname))!=NULL && (fp=_tfopen(fullname,"rb"))!=NULL) {
     do {
       numread=fread(buffer,sizeof(unsigned char),sizeof buffer,fp);
       ulCRC=PartialCRC(ulCRC,buffer,numread);
-    } while(numread==sizeof buffer);
+    } while (numread==sizeof buffer);
     fclose(fp);
   } /* if */
-  return(ulCRC ^ 0xffffffff);
+  return (ulCRC ^ 0xffffffff);
 }
 
 
