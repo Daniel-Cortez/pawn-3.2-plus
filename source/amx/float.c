@@ -23,6 +23,9 @@
 #include <assert.h>
 #include <math.h>
 #include "amx.h"
+#if defined HAVE_FLOAT_H
+  #include <float.h>
+#endif
 
 #define EXPECT_PARAMS(num) \
   do { \
@@ -37,9 +40,15 @@
 */
 
 #if PAWN_CELL_SIZE==32
-  #define REAL          float
+  #define REAL              float
+  #if defined FLT_EPSILON
+    #define REAL_EPSILON    FLT_EPSILON
+  #endif
 #elif PAWN_CELL_SIZE==64
-  #define REAL          double
+  #define REAL              double
+  #if defined DBL_EPSILON
+    #define REAL_EPSILON    DBL_EPSILON
+  #endif
 #else
   #error Unsupported cell size
 #endif
@@ -328,14 +337,26 @@ static cell AMX_NATIVE_CALL n_floatlog(AMX *amx,const cell *params)
     *   params[2] = float operand 2 (base)
     */
     REAL fValue, fBase;
+#if defined REAL_EPSILON
+    REAL fTemp;
+#endif
+    int base10;
 
     EXPECT_PARAMS(2);
 
     fValue = amx_ctof(params[1]);
     fBase = amx_ctof(params[2]);
-    if (fValue <= 0.0 || fBase <= 0)
+    if (fValue <= 0.0 || fBase <= 0.0)
         return amx_RaiseError(amx, AMX_ERR_DOMAIN), 0;
-    if (fBase == 10.0) // ??? epsilon
+#if defined REAL_EPSILON
+    fTemp = fBase - 10.0;
+    if (fTemp < 0.0)
+        fTemp = -fTemp;
+    base10 = (fTemp < REAL_EPSILON);
+#else
+    base10 = (fBase == 10.0); // ??? epsilon
+#endif
+    if (base10)
         fValue = (REAL)log10(fValue);
     else
         fValue = (REAL)(log(fValue) / log(fBase));
@@ -424,7 +445,8 @@ static cell AMX_NATIVE_CALL n_floatabs(AMX *amx,const cell *params)
     EXPECT_PARAMS(1);
 
     fA = amx_ctof(params[1]);
-    fA = (fA >= 0) ? fA : -fA;
+    if (fA < 0)
+        fA = -fA;
     (void)amx;
     return amx_ftoc(fA);
 }
