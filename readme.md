@@ -69,6 +69,18 @@ There are also fixes for already existing functions such as:
 <li>printf
 <br/>Fixed handling of "%%".
 </li>
+
+<li>ispacked
+<br/>Fixed invalid return value (0) when a packed string starts with a cell with the most significant bit set (e.g. <code>!"\128abc"</code>).
+</li>
+
+<li>strfind
+<br/>Fixed the function being prone to an out of bounds access when the search start position (the <code>index</code> argument) is negative.
+</li>
+
+<li>strdel
+<br/>Fixed the function being prone to an out of bounds access when the position of the first character to remove (the <code>start</code> argument) is negative.
+</li>
 </ul>
 </li>
 
