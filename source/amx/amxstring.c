@@ -285,7 +285,6 @@ static cell AMX_NATIVE_CALL n_strcat(AMX *amx,const cell *params)
   cell *cdest,*csrc;
   int len,len2,bufsize;
   int packed,err;
-  size_t lastaddr;
 
   EXPECT_PARAMS(3);
 
@@ -442,7 +441,7 @@ err_native:
   /* get the maximum length to compare */
   amx_StrLen(cstr,&lenstr);
   amx_StrLen(csub,&lensub);
-  if (lensub==0)
+  if (lensub==0 || params[4]<=0 || (int)params[4]>=lenstr)
     return -1;
 
   /* get the start character of the substring, for quicker searching */
@@ -469,7 +468,6 @@ static cell AMX_NATIVE_CALL n_strmid(AMX *amx,const cell *params)
   cell *cdest,*csrc;
   int len,err,bufsize,packed;
   int soffs,doffs;
-  size_t lastaddr;
   unsigned char *ptr;
   unsigned char c;
   int start,end;
@@ -550,6 +548,8 @@ static cell AMX_NATIVE_CALL n_strdel(AMX *amx,const cell *params)
   } /* if */
   amx_StrLen(cstr,&length);
   index=(int)params[2];
+  if (index<0)
+    index=0;
   offs=(int)params[3]-index;
   if (index>=length || offs<=0)
     return 0;
@@ -745,7 +745,7 @@ static cell AMX_NATIVE_CALL n_ispacked(AMX *amx,const cell *params)
     amx_RaiseError(amx,AMX_ERR_NATIVE);
     return 0;
   } /* if */
-  return *cstr>=UNPACKEDMAX;
+  return (ucell)*cstr>=UNPACKEDMAX;
 }
 
 
@@ -872,8 +872,8 @@ err_native:
   if (params[4]<=0 || verify_addr(amx,params[1]+params[4])!=AMX_ERR_NONE)
     goto err_native;
   numbytes=params[3];
-  if (numbytes>params[4]*sizeof(cell))
-    numbytes=params[4]*sizeof(cell);
+  if (numbytes>params[4]*(cell)sizeof(cell))
+    numbytes=params[4]*(cell)sizeof(cell);
   /* get the source */
   amx_GetString((char *)src,cstr,0,sizeof src);
   /* encode (and check for errors) */
