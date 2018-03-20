@@ -363,9 +363,9 @@ static size_t fgets_char(FILE *fp, char *string, size_t max)
 static char *completename(TCHAR *dest, TCHAR *src, size_t size)
 {
   TCHAR *ptr;
+  size_t len;
   #if defined AMXFILE_VAR
     TCHAR *prefix;
-    size_t len;
 
     /* only files below a specific path are accessible */
     prefix=getenv(AMXFILE_VAR);
@@ -435,7 +435,8 @@ static char *completename(TCHAR *dest, TCHAR *src, size_t size)
         return NULL;            /* path name is not allowed */
 
     /* concatenate the drive letter to the destination path */
-    if (_tcslen(dest)+_tcslen(src)>=size)
+    len=_tcslen(src);
+    if (len==0 || _tcslen(dest)+len>=size)
       return NULL;
     _tcscat(dest,src);
 
@@ -447,7 +448,8 @@ static char *completename(TCHAR *dest, TCHAR *src, size_t size)
     return dest;
 
   #else
-    if (_tcslen(src)>=size)
+    len=_tcslen(src);
+    if (len==0 || len>=size)
       return NULL;
     _tcscpy(dest,src);
     /* change forward slashes into proper directory separators */
@@ -843,7 +845,7 @@ err_native:
 /* bool: fcreatedir(const name[]) */
 static cell AMX_NATIVE_CALL n_fcreatedir(AMX *amx, const cell *params)
 {
-  TCHAR *name,fname[_MAX_PATH];
+  TCHAR *name,fullname[_MAX_PATH];
 
   EXPECT_PARAMS(1);
 
@@ -852,12 +854,12 @@ static cell AMX_NATIVE_CALL n_fcreatedir(AMX *amx, const cell *params)
     amx_RaiseError(amx,AMX_ERR_NATIVE);
     return 0;
   } /* if */
-  if (completename(fname,name,sizearray(fname))==NULL)
+  if (completename(fullname,name,sizearray(fullname))==NULL)
     return 0;
   #if defined _Windows || defined __MSDOS__
-    return (_tmkdir(fname)==0) ? 1 : 0;
+    return (_tmkdir(fullname)==0) ? 1 : 0;
   #else
-    return (_tmkdir(fname,(S_IRWXU | S_IRGRP | S_IXGRP | S_IROTH | S_IXOTH))==0) ? 1 : 0;
+    return (_tmkdir(fullname,(S_IRWXU | S_IRGRP | S_IXGRP | S_IROTH | S_IXOTH))==0) ? 1 : 0;
   #endif
 }
 
@@ -1003,7 +1005,7 @@ err_native:
   } /* if */
   if (completename(fullname,name,sizearray(fullname))!=NULL) {
     struct stat stbuf;
-    if (_tstat(name,&stbuf)!=0)
+    if (_tstat(fullname,&stbuf)!=0)
       return 0;
     if (amx_GetAddr(amx,params[2],&cptr)!=AMX_ERR_NONE)
       goto err_native;
@@ -1042,10 +1044,10 @@ static cell AMX_NATIVE_CALL n_fattrib(AMX *amx, const cell *params)
       struct utimbuf times;
       times.actime=(unsigned long)params[2];
       times.modtime=(unsigned long)params[2];
-      result=result && (_tutime(name,&times)==0);
+      result=result && (_tutime(fullname,&times)==0);
     } /* if */
     if (params[3]!=0x0f)
-      result=result && (_tchmod(name,(int)params[3])==0);
+      result=result && (_tchmod(fullname,(int)params[3])==0);
   } /* if */
   return result;
 }
@@ -1165,23 +1167,23 @@ static cell AMX_NATIVE_CALL n_filecrc(AMX *amx, const cell *params)
   extern "C"
 #endif
 AMX_NATIVE_INFO file_Natives[] = {
-  { "fopen",       n_fopen },
-  { "fclose",      n_fclose },
-  { "fwrite",      n_fwrite },
-  { "fread",       n_fread },
-  { "fputchar",    n_fputchar },
-  { "fgetchar",    n_fgetchar },
-  { "fblockwrite", n_fblockwrite },
-  { "fblockread",  n_fblockread },
-  { "ftemp",       n_ftemp },
-  { "fseek",       n_fseek },
-  { "flength",     n_flength },
-  { "fremove",     n_fremove },
-  { "frename",     n_frename },
-  { "fcopy",       n_fcopy },
-  { "fcreatedir",  n_fcreatedir },
-  { "fexist",      n_fexist },
-  { "fmatch",      n_fmatch },
+  { "fopen",        n_fopen },
+  { "fclose",       n_fclose },
+  { "fwrite",       n_fwrite },
+  { "fread",        n_fread },
+  { "fputchar",     n_fputchar },
+  { "fgetchar",     n_fgetchar },
+  { "fblockwrite",  n_fblockwrite },
+  { "fblockread",   n_fblockread },
+  { "ftemp",        n_ftemp },
+  { "fseek",        n_fseek },
+  { "flength",      n_flength },
+  { "fremove",      n_fremove },
+  { "frename",      n_frename },
+  { "fcopy",        n_fcopy },
+  { "fcreatedir",   n_fcreatedir },
+  { "fexist",       n_fexist },
+  { "fmatch",       n_fmatch },
   { "fstat",       n_fstat },
   { "fattrib",     n_fattrib },
   { "filecrc",     n_filecrc },

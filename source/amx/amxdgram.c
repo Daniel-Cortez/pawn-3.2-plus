@@ -124,7 +124,7 @@ static int udp_Send(const char *host,short port,const char *message,int size)
   memset((void *)&sRemote,0,sizeof sRemote);
   sRemote.sin_family=AF_INET;
   sRemote.sin_port=htons(port);
-  sRemote.sin_addr.s_addr= (host==NULL) ? htonl(INADDR_BROADCAST) : udp_GetHostAddr(host,0);
+  sRemote.sin_addr.s_addr= (host[0]=='\0') ? htonl(INADDR_BROADCAST) : udp_GetHostAddr(host,0);
 
   if (sendto(sLocal,message,size,0,(struct sockaddr *)&sRemote,sizeof sRemote)==-1)
     return -1;
