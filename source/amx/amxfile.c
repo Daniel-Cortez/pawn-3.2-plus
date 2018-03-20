@@ -76,6 +76,7 @@
 #endif
 
 #include "fpattern.c"
+#include "minini/dev/minIni.h"
 
 #if !defined sizearray
   #define sizearray(a)  (sizeof(a)/sizeof((a)[0]))
@@ -1162,6 +1163,174 @@ static cell AMX_NATIVE_CALL n_filecrc(AMX *amx, const cell *params)
   return (ulCRC ^ 0xffffffff);
 }
 
+/* Default file name for INI-related functions */
+static const TCHAR default_cfg_name[] = __T("config.ini");
+
+/* readcfg(const filename[]="", const section[]="", const key[], value[], size=sizeof value, const defvalue[]="", bool:pack=false) */
+static cell AMX_NATIVE_CALL n_readcfg(AMX *amx, const cell *params)
+{
+  TCHAR *name,*section,*key,*defvalue;
+  TCHAR fullname[_MAX_PATH],*buffer;
+  cell *cptr;
+  cell bufsize,numchars;
+  int pack;
+
+  EXPECT_PARAMS(7);
+
+  amx_StrParam(amx,params[1],name);
+  if (name==NULL) {
+err_native:
+    amx_RaiseError(amx,AMX_ERR_NATIVE);
+    return 0;
+  } /* if */
+  if (name[0]=='\0')
+    name=(TCHAR *)default_cfg_name;
+  if (completename(fullname,name,sizearray(fullname))==NULL)
+    fullname[0]='\0';
+  amx_StrParam(amx,params[2],section);
+  if (section==NULL)
+    goto err_native;
+  amx_StrParam(amx,params[3],key);
+  if (key==NULL)
+    goto err_native;
+  if (amx_GetAddr(amx,params[4],&cptr)!=AMX_ERR_NONE)
+    goto err_native;
+  bufsize=params[5];
+  if (bufsize<=0 || verify_addr(amx,params[4]+bufsize)!=AMX_ERR_NONE)
+    goto err_native;
+  pack=(int)params[7];
+  if (pack)
+    bufsize *= (cell)sizeof(cell);
+  if ((buffer=(TCHAR *)alloca((size_t)bufsize*sizeof(cell)))==NULL)
+    goto err_native;
+  amx_StrParam(amx,params[6],defvalue);
+  if (defvalue==NULL)
+    goto err_native;
+  if (fullname[0]=='\0') {
+    _tcsncpy(buffer,defvalue,bufsize);
+    numchars=_tcslen(buffer);
+  } else {
+    numchars=(cell)ini_gets(section,key,defvalue,buffer,(int)bufsize,fullname);
+  } /* if */
+  amx_SetString(cptr,buffer,pack,0,(int)bufsize);
+  return numchars;
+}
+
+/* readcfgvalue(const filename[]="", const section[]="", const key[], defvalue=0) */
+static cell AMX_NATIVE_CALL n_readcfgvalue(AMX *amx, const cell *params)
+{
+  TCHAR *name,*section,*key;
+  TCHAR fullname[_MAX_PATH];
+
+  EXPECT_PARAMS(4);
+
+  amx_StrParam(amx,params[1],name);
+  if (name==NULL) {
+err_native:
+    amx_RaiseError(amx,AMX_ERR_NATIVE);
+    return 0;
+  } /* if */
+  if (name[0]=='\0')
+    name=(TCHAR *)default_cfg_name;
+  if (completename(fullname,name,sizearray(fullname))==NULL)
+    fullname[0]='\0';
+  amx_StrParam(amx,params[2],section);
+  if (section==NULL)
+    goto err_native;
+  amx_StrParam(amx,params[3],key);
+  if (key==NULL)
+    goto err_native;
+  if (fullname[0]=='\0')
+    return params[4];
+  return (cell)ini_getl(section,key,(long)params[4],fullname);
+}
+
+/* bool: writecfg(const filename[]="", const section[]="", const key[], const value[]) */
+static cell AMX_NATIVE_CALL n_writecfg(AMX *amx, const cell *params)
+{
+  TCHAR *name,*section,*key,*value;
+  TCHAR fullname[_MAX_PATH];
+
+  EXPECT_PARAMS(4);
+
+  amx_StrParam(amx,params[1],name);
+  if (name==NULL) {
+err_native:
+    amx_RaiseError(amx,AMX_ERR_NATIVE);
+    return 0;
+  } /* if */
+  if (name[0]=='\0')
+    name=(TCHAR *)default_cfg_name;
+  if (completename(fullname,name,sizearray(fullname))==NULL)
+    return 0;
+  amx_StrParam(amx,params[2],section);
+  if (section==NULL)
+    goto err_native;
+  amx_StrParam(amx,params[3],key);
+  if (key==NULL)
+    goto err_native;
+  amx_StrParam(amx,params[4],value);
+  if (value==NULL)
+    goto err_native;
+  return ini_puts(section,key,value,fullname);
+}
+
+/* bool: writecfgvalue(const filename[]="", const section[]="", const key[], value) */
+static cell AMX_NATIVE_CALL n_writecfgvalue(AMX *amx, const cell *params)
+{
+  TCHAR *name,*section,*key;
+  TCHAR fullname[_MAX_PATH];
+
+  EXPECT_PARAMS(4);
+
+  amx_StrParam(amx,params[1],name);
+  if (name==NULL) {
+err_native:
+    amx_RaiseError(amx,AMX_ERR_NATIVE);
+    return 0;
+  } /* if */
+  if (name[0]=='\0')
+    name=(TCHAR *)default_cfg_name;
+  if (completename(fullname,name,sizearray(fullname))==NULL)
+    return 0;
+  amx_StrParam(amx,params[2],section);
+  if (section==NULL)
+    goto err_native;
+  amx_StrParam(amx,params[3],key);
+  if (key==NULL)
+    goto err_native;
+  return ini_putl(section,key,(long)params[4],fullname);
+}
+
+/* bool: deletecfg(const filename[]="", const section[]="", const key[]="") */
+static cell AMX_NATIVE_CALL n_deletecfg(AMX *amx, const cell *params)
+{
+  TCHAR *name,*section,*key;
+  TCHAR fullname[_MAX_PATH];
+
+  EXPECT_PARAMS(3);
+
+  amx_StrParam(amx,params[1],name);
+  if (name==NULL) {
+err_native:
+    amx_RaiseError(amx,AMX_ERR_NATIVE);
+    return 0;
+  } /* if */
+  if (name[0]=='\0')
+    name=(TCHAR *)default_cfg_name;
+  if (completename(fullname,name,sizearray(fullname))==NULL)
+    return 0;
+  amx_StrParam(amx,params[2],section);
+  if (section==NULL)
+    goto err_native;
+  if (section[0]=='\0')
+    section=NULL;
+  amx_StrParam(amx,params[3],key);
+  if (key==NULL)
+    goto err_native;
+  return ini_puts(section,key,NULL,fullname);
+}
+
 
 #if defined __cplusplus
   extern "C"
@@ -1184,9 +1353,14 @@ AMX_NATIVE_INFO file_Natives[] = {
   { "fcreatedir",   n_fcreatedir },
   { "fexist",       n_fexist },
   { "fmatch",       n_fmatch },
-  { "fstat",       n_fstat },
-  { "fattrib",     n_fattrib },
-  { "filecrc",     n_filecrc },
+  { "fstat",        n_fstat },
+  { "fattrib",      n_fattrib },
+  { "filecrc",      n_filecrc },
+  { "readcfg",      n_readcfg },
+  { "readcfgvalue", n_readcfgvalue },
+  { "writecfg",     n_writecfg },
+  { "writecfgvalue",n_writecfgvalue },
+  { "deletecfg",    n_deletecfg },
   { NULL, NULL }        /* terminator */
 };
 
