@@ -10,18 +10,25 @@ This project, on the other hand, is focused on improvement of the runtime - some
 
 ## Changes:
 <ul>
-<li>Backported non-breaking changes from Pawn 3.3 and pre-release versions up to 4.0.
-<br/>Notable changes include the addition of new native functions in the following modules:
+<li>Backported non-breaking changes from Pawn 3.3 and reimplemented native functions from Pawn 4.
+<br/>Notable changes include the addition of new functions in the following modules:
 <ul>
 <li>amxFile
 
 ```Pawn
 native bool: frename(const oldname[], const newname[]);
+native bool: fcopy(const source[], const target[]);
+native bool: fcreatedir(const name[]);
+
 native bool: fstat(name[], &size = 0, &timestamp = 0, &mode = 0, &inode = 0);
 native bool: fattrib(const name[], timestamp=0, attrib=0x0f);
 native       filecrc(const name[]);
-native bool: fcopy(const source[], const target[]);
-native bool: fcreatedir(const name[]);
+
+native       readcfg(const filename[]="", const section[]="", const key[], value[], size=sizeof value, const defvalue[]="", bool:pack=false);
+native       readcfgvalue(const filename[]="", const section[]="", const key[], defvalue=0);
+native bool: writecfg(const filename[]="", const section[]="", const key[], const value[]);
+native bool: writecfgvalue(const filename[]="", const section[]="", const key[], value);
+native bool: deletecfg(const filename[]="", const section[]="", const key[]="");
 ```
 </li>
 
@@ -46,7 +53,7 @@ native cvttimestamp(seconds1970, &year=0, &month=0, &day=0, &hour=0, &minute=0, 
 ```
 </li>
 </ul>
-There are also fixes for already existing functions such as:
+There are also fixes for already existing native functions:
 <ul>
 <li>valstr
 <br/>Fixed hangup on large numbers.
