@@ -145,62 +145,71 @@ static proplist *list_finditem(proplist *root,cell id,char *name,cell value,
 /* numargs() */
 static cell AMX_NATIVE_CALL n_numargs(AMX *amx,const cell *params)
 {
-  AMX_HEADER *hdr;
-  unsigned char *data;
-  cell numbytes;
+  cell *cptr;
 
   EXPECT_PARAMS(0);
 
-  (void)params;
-  hdr=(AMX_HEADER *)amx->base;
-  data=amx->data ? amx->data : amx->base+(int)hdr->dat;
   /* the number of bytes is on the stack, at "frm + 2*cell" */
-  numbytes= * (cell *)(data+(int)amx->frm+2*sizeof(cell));
+  amx_GetAddr(amx,amx->frm+2*(cell)sizeof(cell),&cptr);
+  assert(cptr!=NULL);
   /* the number of arguments is the number of bytes divided
    * by the size of a cell */
-  return numbytes/sizeof(cell);
+  return (*cptr)/(cell)sizeof(cell);
 }
 
 /* getarg(arg, index=0) */
 static cell AMX_NATIVE_CALL n_getarg(AMX *amx,const cell *params)
 {
-  AMX_HEADER *hdr;
-  unsigned char *data;
-  cell value;
+  cell *cptr;
+  cell numargs,addr;
 
   EXPECT_PARAMS(2);
 
-  hdr=(AMX_HEADER *)amx->base;
-  data=amx->data ? amx->data : amx->base+(int)hdr->dat;
+  amx_GetAddr(amx,amx->frm+2*(cell)sizeof(cell),&cptr);
+  assert(cptr!=NULL);
+  numargs=(*cptr)/(cell)sizeof(cell);
+  if (params[1]>=numargs)
+    return 0;
   /* get the base value */
-  value= * (cell *)(data+(int)amx->frm+((int)params[1]+3)*sizeof(cell));
+  if (amx_GetAddr(amx,amx->frm+(3+params[1])*(cell)sizeof(cell),&cptr)!=AMX_ERR_NONE) {
+err_native:
+    amx_RaiseError(amx,AMX_ERR_NATIVE);
+    return 0;
+  } /* if */
+  addr=*cptr;
   /* adjust the address in "value" in case of an array access */
-  value+=params[2]*sizeof(cell);
-  /* get the value indirectly */
-  value= * (cell *)(data+(int)value);
-  return value;
+  addr+=params[2]*(cell)sizeof(cell);
+  if (amx_GetAddr(amx,addr,&cptr)!=AMX_ERR_NONE)
+    goto err_native;
+  return *cptr;
 }
 
 /* setarg(arg, index=0, value) */
 static cell AMX_NATIVE_CALL n_setarg(AMX *amx,const cell *params)
 {
-  AMX_HEADER *hdr;
-  unsigned char *data;
-  cell value;
+  cell *cptr;
+  cell numargs,addr;
 
   EXPECT_PARAMS(3);
 
-  hdr=(AMX_HEADER *)amx->base;
-  data=amx->data ? amx->data : amx->base+(int)hdr->dat;
-  /* get the base value */
-  value= * (cell *)(data+(int)amx->frm+((int)params[1]+3)*sizeof(cell));
-  /* adjust the address in "value" in case of an array access */
-  value+=params[2]*sizeof(cell);
-  /* verify the address */
-  if (value<0 || (value>=amx->hea && value<amx->stk))
+  amx_GetAddr(amx,amx->frm+2*(cell)sizeof(cell),&cptr);
+  assert(cptr!=NULL);
+  numargs=(*cptr)/(cell)sizeof(cell);
+  if (params[1]>=numargs)
     return 0;
+  /* get the base value */
+  if (amx_GetAddr(amx,amx->frm+(3+params[1])*(cell)sizeof(cell),&cptr)!=AMX_ERR_NONE) {
+err_native:
+    amx_RaiseError(amx,AMX_ERR_NATIVE);
+    return 0;
+  } /* if */
+  addr=*cptr;
+  /* adjust the address in "value" in case of an array access */
+  addr+=params[2]*(cell)sizeof(cell);
   /* set the value indirectly */
-  * (cell *)(data+(int)value) = params[3];
+  if (amx_GetAddr(amx,addr,&cptr)!=AMX_ERR_NONE)
+    goto err_native;
+  (*cptr)=params[3];
   return 1;
 }
 
@@ -249,8 +258,8 @@ void amx_swapcell(cell *pc)
       unsigned char b[4];
     #elif PAWN_CELL_SIZE==64
       unsigned char b[8];
-	#else
-	  #error Unsupported cell size
+    #else
+      #error Unsupported cell size
     #endif
   } value;
   unsigned char t;
@@ -272,13 +281,13 @@ void amx_swapcell(cell *pc)
     t = value.b[0];
     value.b[0] = value.b[7];
     value.b[7] = t;
-	t = value.b[1];
-	value.b[1] = value.b[6];
-	value.b[6] = t;
-	t = value.b[2];
-	value.b[2] = value.b[5];
-	value.b[5] = t;
-	t = value.b[3];
+    t = value.b[1];
+    value.b[1] = value.b[6];
+    value.b[6] = t;
+    t = value.b[2];
+    value.b[2] = value.b[5];
+    value.b[5] = t;
+    t = value.b[3];
     value.b[3] = value.b[4];
     value.b[4] = t;
   #else
