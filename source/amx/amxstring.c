@@ -695,44 +695,54 @@ err_native:
   return result;
 }
 
-/* valstr(dest[], value, bool:pack=false) */
+/* valstr(dest[], value, bool:pack=false, maxlength=sizeof dest) */
 static cell AMX_NATIVE_CALL n_valstr(AMX *amx,const cell *params)
 {
-  TCHAR str[50];
-  cell value,temp;
+#if PAWN_CELL_SIZE==16
+  static char str[7]=
+    {'\0','\0','\0','\0','\0','\0','\0'};
+  char *start=&str[5];
+#elif PAWN_CELL_SIZE==32
+  static char str[12]=
+    {'\0','\0','\0','\0','\0','\0','\0','\0','\0','\0','\0','\0'};
+  char *start=&str[10];
+#elif PAWN_CELL_SIZE==64
+  static char str[21]=
+    {'\0','\0','\0','\0','\0','\0','\0','\0','\0','\0','\0','\0','\0','\0','\0','\0','\0','\0','\0','\0','\0'};
+  char *start=&str[19];
+#else
+  #error Unsupported cell size
+#endif
+  char *ptr;
   cell *cstr;
-  int len,result,negate;
+  cell val;
+  int negate;
 
-  EXPECT_PARAMS(3);
+  EXPECT_PARAMS(4);
 
-  /* find out how many digits are needed */
-  negate=0;
-  len=1;
-  value=params[2];
-  if (value<0) {
-    negate=1;
-    len++;
-    value=-value;
-  } /* if */
-  for (temp=value; temp>=10; temp/=10)
-    len++;
-  assert(len<=sizearray(str));
-
-  /* put in the string */
-  result=len;
-  str[len--]='\0';
-  while (len>=negate) {
-    str[len--]=(char)((value % 10)+'0');
-    value/=10;
-  } /* while */
-  if (negate)
-    str[0]='-';
   if (amx_GetAddr(amx,params[1],&cstr)!=AMX_ERR_NONE) {
+err_native:
     amx_RaiseError(amx,AMX_ERR_NATIVE);
     return 0;
   } /* if */
-  amx_SetString(cstr,str,params[3],sizeof(TCHAR)>1,UNLIMITED);
-  return result;
+  if (params[4]<=0 || verify_addr(amx,params[1]+params[4])!=AMX_ERR_NONE)
+    goto err_native;
+
+  val=params[2];
+  negate=(val<0);
+  if (negate)
+    val=-val;
+  ptr=start;
+  do {
+    *ptr-- = (char)(val % 10)+'0';
+  } while ((val /= 10)!=0);
+  if (negate)
+    *ptr-- = '-';
+  amx_SetString(cstr,ptr+1,(int)params[3],0,(int)params[4]);
+  val=(cell)((size_t)start-(size_t)ptr)/(cell)sizeof(char);
+  if (val>=params[4])
+    val=params[4]-1;
+  return val;
 }
 
 /* bool: ispacked(const string[]) */

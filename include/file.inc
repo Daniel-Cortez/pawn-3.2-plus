@@ -49,7 +49,7 @@ native bool: fstat(const name[], &size = 0, &timestamp = 0, &mode = 0, &inode = 
 native bool: fattrib(const name[], timestamp=0, attrib=0x0f);
 native       filecrc(const name[]);
 
-native       readcfg(const filename[]="", const section[]="", const key[], value[], size=sizeof value, const defvalue[]="", bool:pack=false);
+native       readcfg(const filename[]="", const section[]="", const key[], value[], size=sizeof value, const defvalue[]="", bool: pack=false);
 native       readcfgvalue(const filename[]="", const section[]="", const key[], defvalue=0);
 native bool: writecfg(const filename[]="", const section[]="", const key[], const value[]);
 native bool: writecfgvalue(const filename[]="", const section[]="", const key[], value);
