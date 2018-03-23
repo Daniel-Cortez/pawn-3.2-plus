@@ -24,7 +24,7 @@ native bool: fstat(name[], &size = 0, &timestamp = 0, &mode = 0, &inode = 0);
 native bool: fattrib(const name[], timestamp=0, attrib=0x0f);
 native       filecrc(const name[]);
 
-native       readcfg(const filename[]="", const section[]="", const key[], value[], size=sizeof value, const defvalue[]="", bool:pack=false);
+native       readcfg(const filename[]="", const section[]="", const key[], value[], size=sizeof value, const defvalue[]="", bool: pack=false);
 native       readcfgvalue(const filename[]="", const section[]="", const key[], defvalue=0);
 native bool: writecfg(const filename[]="", const section[]="", const key[], const value[]);
 native bool: writecfgvalue(const filename[]="", const section[]="", const key[], value);
@@ -57,6 +57,7 @@ There are also fixes for already existing native functions:
 <ul>
 <li>valstr
 <br/>Fixed hangup on large numbers.
+<br/>Fixed the function being prone to a buffer overrun (added the <code>maxlength</code> argument).
 </li>
 
 <li>strcmp
@@ -86,6 +87,14 @@ There are also fixes for already existing native functions:
 
 <li>strdel
 <br/>Fixed the function being prone to an out of bounds access when the position of the first character to remove (the <code>start</code> argument) is negative.
+</li>
+
+<li>getarg
+<br/>Fixed the function allowing to read data outside of the script memory.
+</li>
+
+<li>getproperty
+<br/>Fixed the function being prone to a buffer overrun (added the <code>maxlength</code> argument).
 </li>
 </ul>
 </li>
