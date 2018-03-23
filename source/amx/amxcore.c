@@ -396,34 +396,29 @@ static int verify_addr(AMX *amx,cell addr)
   return amx_GetAddr(amx,addr,&cdest);
 }
 
-/* getproperty(id=0, const name[]="", value=cellmin, string[]="") */
+/* getproperty(id=0, const name[]="", value=cellmin, string[]="", maxlength=sizeof string, bool: pack=false) */
 static cell AMX_NATIVE_CALL n_getproperty(AMX *amx,const cell *params)
 {
-  cell *cstr;
+  cell *cstr,*cdest;
   char *name;
   proplist *item;
 
-  EXPECT_PARAMS(4);
+  EXPECT_PARAMS(6);
 
   if (amx_GetAddr(amx,params[2],&cstr)!=AMX_ERR_NONE) {
+err_native:
     amx_RaiseError(amx,AMX_ERR_NATIVE);
     return 0;
   } /* if */
+  if (amx_GetAddr(amx,params[4],&cdest)!=AMX_ERR_NONE)
+    goto err_native;
+  if (params[5]<=0 || verify_addr(amx,params[4]+params[5])!=AMX_ERR_NONE)
+    goto err_native;
   name=MakePackedString(cstr);
   item=list_finditem(&proproot,params[1],name,params[3],NULL);
   /* if list_finditem() found the value, store the name */
-  if (item!=NULL && item->value==params[3] && strlen(name)==0) {
-    int needed=(strlen(item->name)+sizeof(cell)-1)/sizeof(cell);     /* # of cells needed */
-    if (verify_addr(amx,(cell)(params[4]+needed))!=AMX_ERR_NONE) {
-err_native:
-      free(name);
-      amx_RaiseError(amx,AMX_ERR_NATIVE);
-      return 0;
-    } /* if */
-    if (amx_GetAddr(amx,params[4],&cstr)!=AMX_ERR_NONE)
-      goto err_native;
-    amx_SetString(cstr,item->name,1,0,UNLIMITED);
-  } /* if */
+  if (item!=NULL && item->value==params[3] && strlen(name)==0)
+    amx_SetString(cdest,item->name,(int)params[6],0,(int)params[5]);
   free(name);
   return (item!=NULL) ? item->value : 0;
 }
@@ -432,35 +427,35 @@ err_native:
 static cell AMX_NATIVE_CALL n_setproperty(AMX *amx,const cell *params)
 {
   cell prev;
-  cell *cstr;
-  char *name;
+  cell *cname,*cstr;
+  char *str;
   proplist *item;
 
   EXPECT_PARAMS(4);
 
-  if (amx_GetAddr(amx,params[2],&cstr)!=AMX_ERR_NONE) {
+  if (amx_GetAddr(amx,params[2],&cname)!=AMX_ERR_NONE) {
 err_native:
     amx_RaiseError(amx,AMX_ERR_NATIVE);
     return 0;
   } /* if */
+  if (amx_GetAddr(amx,params[4],&cstr)!=AMX_ERR_NONE)
+    goto err_native;
   prev=0;
-  name=MakePackedString(cstr);
-  item=list_finditem(&proproot,params[1],name,params[3],NULL);
+  str=MakePackedString(cname);
+  item=list_finditem(&proproot,params[1],str,params[3],NULL);
   if (item==NULL)
     item=list_additem(&proproot);
   if (item==NULL) {
     amx_RaiseError(amx,AMX_ERR_MEMORY);
   } else {
     prev=item->value;
-    if (strlen(name)==0) {
-      free(name);
-      if (amx_GetAddr(amx,params[4],&cstr)!=AMX_ERR_NONE)
-        goto err_native;
-      name=MakePackedString(cstr);
+    if (strlen(str)==0) {
+      free(str);
+      str=MakePackedString(cstr);
     } /* if */
-    list_setitem(item,params[1],name,params[3]);
+    list_setitem(item,params[1],str,params[3]);
   } /* if */
-  free(name);
+  free(str);
   return prev;
 }
 

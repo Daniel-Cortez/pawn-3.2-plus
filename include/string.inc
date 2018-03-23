@@ -23,7 +23,7 @@ native strcmp(const string1[], const string2[], bool:ignorecase=false, length=ce
 native strfind(const string[], const sub[], bool:ignorecase=false, index=0);
 
 native strval(const string[], index=0);
-native valstr(dest[], value, bool:pack=false);
+native valstr(dest[], value, bool:pack=false, maxlength=sizeof dest);
 native bool: ispacked(const string[]);
 
 native strformat(dest[], size=sizeof dest, bool:pack=false, const format[], {Fixed,Float,_}:...);
