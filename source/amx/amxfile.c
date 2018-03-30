@@ -150,6 +150,17 @@ enum seek_whence {
 };
 
 
+
+#define AMX_PTRARRAY_DEFAULT_SIZE 4
+#include "amx_ptrarray.h"
+
+void filepool_cleanup(amx_ptrarray *ptrarray)
+{
+  ptrarray_foreach(ptrarray,(void(*)(void *))fclose);
+}
+DEFINE_PTRARRAY(filepool,filepool_cleanup);
+
+
 /* This function only stores unpacked strings. UTF-8 is used for
  * Unicode, and packed strings can only store 7-bit and 8-bit
  * character sets (ASCII, Latin-1).
@@ -472,9 +483,10 @@ static int verify_addr(AMX *amx,cell addr)
 /* File: fopen(const name[], filemode: mode = io_readwrite) */
 static cell AMX_NATIVE_CALL n_fopen(AMX *amx, const cell *params)
 {
+  FILE *f;
+  cell fileid;
   TCHAR *attrib,*altattrib;
   TCHAR *name,fullname[_MAX_PATH];
-  FILE *f;
 
   EXPECT_PARAMS(2);
 
@@ -505,23 +517,38 @@ static cell AMX_NATIVE_CALL n_fopen(AMX *amx, const cell *params)
   } /* if */
   if (completename(fullname,name,sizearray(fullname))==NULL)
     return 0;
-  f=_tfopen(fullname,attrib);
-  if (f==NULL && altattrib!=NULL)
-    f=_tfopen(fullname,altattrib);
-  return (cell)f;
+  /* insert a placeholder value to see if the pool has a free slot for it */
+  fileid=ptrarray_insert(&filepool,(void *)1);
+  if (fileid!=0) {
+    /* open the file and save its handle into the newly reserved slot */
+    f=_tfopen(fullname,attrib);
+    if (f==NULL && altattrib!=NULL)
+      f=_tfopen(fullname,altattrib);
+    if (f==NULL) {
+      ptrarray_remove(&filepool,fileid);
+      fileid=0;
+    } else {
+      ptrarray_set(&filepool,fileid,(void *)f);
+    } /* if */
+  } /* if */
+  return fileid;
 }
 
 /* bool: fclose(File: handle) */
 static cell AMX_NATIVE_CALL n_fclose(AMX *amx, const cell *params)
 {
+  FILE *f;
   EXPECT_PARAMS(1);
   UNUSED_PARAM(amx);
-  return fclose((FILE*)params[1]) == 0;
+  if ((f=ptrarray_get(&filepool,params[1]))==NULL)
+    return 0;
+  return fclose(f)==0;
 }
 
 /* fwrite(File: handle, const string[]) */
 static cell AMX_NATIVE_CALL n_fwrite(AMX *amx, const cell *params)
 {
+  FILE *f;
   cell *cptr;
   char *str;
   int len;
@@ -536,21 +563,24 @@ err_native:
   amx_StrLen(cptr,&len);
   if (len==0)
     return 0;
+  if ((f=ptrarray_get(&filepool,params[1]))==NULL)
+    return 0;
 
   if ((ucell)*cptr>UNPACKEDMAX) {
     /* the string is packed, write it as an ASCII/ANSI string */
     if ((str=(char*)alloca(len+1))==NULL)
       goto err_native;
     amx_GetString(str,cptr,0,len);
-    return fputs(str,(FILE*)params[1]);
+    return fputs(str,f);
   } /* if */
   /* the string is unpacked, write it as UTF-8 */
-  return fputs_cell((FILE*)params[1],cptr,1);
+  return fputs_cell(f,cptr,1);
 }
 
 /* fread(File: handle, string[], size = sizeof string, bool: pack = false) */
 static cell AMX_NATIVE_CALL n_fread(AMX *amx, const cell *params)
 {
+  FILE *f;
   int chars,max;
   cell *cptr;
   char *str;
@@ -561,7 +591,9 @@ static cell AMX_NATIVE_CALL n_fread(AMX *amx, const cell *params)
   if (max<=0)
     return 0;
   if (params[4])
-    max*=sizeof(cell);
+    max *= sizeof(cell);
+  if ((f=ptrarray_get(&filepool,params[1]))==NULL)
+    return 0;
 
   if (amx_GetAddr(amx,params[2],&cptr)!=AMX_ERR_NONE) {
 err_native:
@@ -575,12 +607,12 @@ err_native:
     if ((str=(char *)alloca(max))==NULL)
       goto err_native;
     /* store as packed string, read an ASCII/ANSI string */
-    chars=fgets_char((FILE*)params[1],str,max);
+    chars=fgets_char(f,str,max);
     assert(chars<max);
     amx_SetString(cptr,str,(int)params[4],0,max);
   } else {
     /* store and unpacked string, interpret UTF-8 */
-    chars=fgets_cell((FILE*)params[1],cptr,max,1);
+    chars=fgets_cell(f,cptr,max,1);
   } /* if */
 
   assert(chars<max);
@@ -590,10 +622,13 @@ err_native:
 /* bool: fputchar(File: handle, value, bool: utf8 = true) */
 static cell AMX_NATIVE_CALL n_fputchar(AMX *amx, const cell *params)
 {
+  FILE *f;
   EXPECT_PARAMS(3);
   UNUSED_PARAM(amx);
+  if ((f=ptrarray_get(&filepool,params[1]))==NULL)
+    return 0;
   if (params[3]) {
-    size_t result;
+    cell result;
     cell str[2];
     str[0]=params[2];
     str[1]=0;
@@ -608,16 +643,19 @@ static cell AMX_NATIVE_CALL n_fputchar(AMX *amx, const cell *params)
 /* fgetchar(File: handle, bool: utf8 = true) */
 static cell AMX_NATIVE_CALL n_fgetchar(AMX *amx, const cell *params)
 {
+  FILE *f;
   cell str[2];
-  size_t result;
+  cell result;
 
   EXPECT_PARAMS(2);
 
   UNUSED_PARAM(amx);
-  if (params[2]) {
-    result=fgets_cell((FILE*)params[1],str,2,1);
+  if ((f=ptrarray_get(&filepool,params[1]))==NULL) {
+    result=0;
+  } else if (params[2]) {
+    result=(cell)fgets_cell(f,str,2,1);
   } else {
-    str[0]=fgetc((FILE*)params[1]);
+    str[0]=fgetc(f);
     result= (str[0]!=EOF);
   } /* if */
   assert(result==0 || result==1);
@@ -640,6 +678,7 @@ static cell AMX_NATIVE_CALL n_fgetchar(AMX *amx, const cell *params)
 /* fblockwrite(File: handle, const buffer[], size = sizeof buffer) */
 static cell AMX_NATIVE_CALL n_fblockwrite(AMX *amx, const cell *params)
 {
+  FILE *f;
   cell *cptr;
   cell count,max;
 
@@ -652,10 +691,12 @@ err_native:
   } /* if */
   if (params[3]<=(cell)0 || verify_addr(amx,params[2]+params[3])!=AMX_ERR_NONE)
     goto err_native;
+  if ((f=ptrarray_get(&filepool,params[1]))==NULL)
+    return 0;
   max=params[3];
   for (count=0; count<max; count++) {
     ucell v=(ucell)*cptr++;
-    if (fwrite(aligncell(&v),sizeof(cell),1,(FILE*)params[1])!=1)
+    if (fwrite(aligncell(&v),sizeof(cell),1,f)!=1)
       break;          /* write error */
   } /* for */
   return count;
@@ -664,6 +705,7 @@ err_native:
 /* fblockread(File: handle, buffer[], size = sizeof buffer) */
 static cell AMX_NATIVE_CALL n_fblockread(AMX *amx, const cell *params)
 {
+  FILE *f;
   cell *cptr;
   cell count,max;
 
@@ -676,10 +718,12 @@ err_native:
   } /* if */
   if (params[3]<=(cell)0 || verify_addr(amx,params[2]+params[3])!=AMX_ERR_NONE)
     goto err_native;
+  if ((f=ptrarray_get(&filepool,params[1]))==NULL)
+    return 0;
   max=params[3];
   for (count=0; count<max; count++) {
     ucell v;
-    if (fread(&v,sizeof(cell),1,(FILE*)params[1])!=1)
+    if (fread(&v,sizeof(cell),1,f)!=1)
       break;          /* write error */
     *(ucell *)(cptr++)=*aligncell(&v);
   } /* for */
@@ -689,19 +733,35 @@ err_native:
 /* File: ftemp() */
 static cell AMX_NATIVE_CALL n_ftemp(AMX *amx, const cell *params)
 {
+  FILE *f;
+  cell fileid;
   EXPECT_PARAMS(0);
   UNUSED_PARAM(amx);
   UNUSED_PARAM(params);
-  return (cell)tmpfile();
+  /* insert a placeholder value to see if the pool has a free slot for it */
+  fileid=ptrarray_insert(&filepool,(void *)1);
+  if (fileid!=0) {
+    /* create a file and save its handle into the newly reserved slot */
+    if ((f=tmpfile())==NULL) {
+      ptrarray_remove(&filepool,fileid);
+      fileid=0;
+    } else {
+      ptrarray_set(&filepool,fileid,(void *)f);
+    } /* if */
+  } /* if */
+  return fileid;
 }
 
 /* fseek(File: handle, position = 0, seek_whence: whence = seek_start) */
 static cell AMX_NATIVE_CALL n_fseek(AMX *amx, const cell *params)
 {
+  FILE *f;
   int whence;
 
   EXPECT_PARAMS(3);
 
+  if ((f=ptrarray_get(&filepool,(size_t)params[1]))==NULL)
+    return -1;
   switch (params[3]) {
   case seek_start:
     whence=SEEK_SET;
@@ -718,7 +778,7 @@ static cell AMX_NATIVE_CALL n_fseek(AMX *amx, const cell *params)
     return 0;
   } /* switch */
   UNUSED_PARAM(amx);
-  return lseek(fileno((FILE*)params[1]),params[2],whence);
+  return lseek(fileno(f),params[2],whence);
 }
 
 /* bool: fremove(const name[]) */
@@ -868,12 +928,15 @@ static cell AMX_NATIVE_CALL n_fcreatedir(AMX *amx, const cell *params)
 /* flength(File: handle) */
 static cell AMX_NATIVE_CALL n_flength(AMX *amx, const cell *params)
 {
+  FILE *f;
   long l,c;
   int fn;
 
   EXPECT_PARAMS(1);
 
-  fn=fileno((FILE*)params[1]);
+  if ((f=ptrarray_get(&filepool,(size_t)params[1]))==NULL)
+    return 0;
+  fn=fileno(f);
   c=lseek(fn,0,SEEK_CUR); /* save the current position */
   l=lseek(fn,0,SEEK_END); /* return the file position at its end */
   lseek(fn,c,SEEK_SET);   /* restore the file pointer */

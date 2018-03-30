@@ -242,7 +242,7 @@ add_amx_ext_module("DGram" ON "amxdgram.c")
 add_amx_ext_module("Console" ON "amxcons.h;amxcons.c")
 add_amx_ext_module("String" ON "amxcons.h;amxcons.c;amxstring.c")
 add_amx_ext_module("Time" ON "amxtime.c")
-add_amx_ext_module("File" ON "amxfile.c;minini/dev/minGlue.h;minini/dev/minIni.h;minini/dev/minIni.c")
+add_amx_ext_module("File" ON "amxfile.c;minini/dev/minGlue.h;minini/dev/minIni.h;minini/dev/minIni.c;amx_ptrarray.h")
 add_amx_ext_module("Process" OFF "amxprocess.c")
 
 option(PAWN_AMX_EXT_CONSOLE_IDLE "Enable @keypressed() callback in AMX extension module Console" ON)
