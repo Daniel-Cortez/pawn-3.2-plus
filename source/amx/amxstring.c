@@ -440,7 +440,7 @@ err_native:
   /* get the maximum length to compare */
   amx_StrLen(cstr,&lenstr);
   amx_StrLen(csub,&lensub);
-  if (lensub==0 || params[4]<=0 || (int)params[4]>=lenstr)
+  if (lensub==0 || params[4]<0 || (int)params[4]>=lenstr)
     return -1;
 
   /* get the start character of the substring, for quicker searching */
