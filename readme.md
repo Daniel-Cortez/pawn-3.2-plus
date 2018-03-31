@@ -118,9 +118,10 @@ You can compare the perfornmance of the new VM and the old ones by building them
 <br/>This includes address checks for branch/memory access instructions and opcode-specific checks (e.g. function ID check for the 1'st argument of SYSREQ.c and SYSREQ.n).
 </li>
 
-<li>Removed the dependency of the cell size from the pointer size.
+<li>Removed the dependency of a cell size from a pointer size.
 <br/>Now it's possible to use the runtime with 32-bit cell size on 64-bit processors.
-In the original version of Pawn 3.2 doing so wasn't a good idea since the physical addresses of native functions and AMX extension modules were stored in Pawn cells and the cell size could not be enough to fit a pointer.
+In the original version of Pawn 3.2 doing so wasn't a good idea since the physical addresses of native functions and AMX extension modules were stored in Pawn cells and a cell size could not be enough to fit a pointer.
+<br/>Also, as part of this change, file functions in the amxFile module now operate on file IDs (1, 2, ...) instead of casting (FILE *) pointers into cells and vice versa.
 </li>
 
 <li>Implemented relocation of data addresses in data access instructions.
