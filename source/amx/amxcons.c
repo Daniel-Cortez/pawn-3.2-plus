@@ -1411,10 +1411,7 @@ static int AMXAPI amx_ConsoleIdle(AMX *amx, int AMXAPI Exec(AMX *, cell *, int))
 }
 #endif
 
-#if defined __cplusplus
-  extern "C"
-#endif
-const AMX_NATIVE_INFO console_Natives[] = {
+static const AMX_NATIVE_INFO natives[] = {
   { "getchar",   n_getchar },
   { "getstring", n_getstring },
   { "getvalue",  n_getvalue },
@@ -1441,7 +1438,7 @@ int AMXEXPORT AMXAPI amx_ConsoleInit(AMX *amx)
     } /* if */
   #endif
 
-  return amx_Register(amx, console_Natives, -1);
+  return amx_Register(amx,natives,-1);
 }
 
 int AMXEXPORT AMXAPI amx_ConsoleCleanup(AMX *amx)

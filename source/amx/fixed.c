@@ -716,10 +716,8 @@ static cell AMX_NATIVE_CALL n_fabs(AMX *amx,const cell *params)
   return (result>=0) ? result : -result;
 }
 
-#if defined __cplusplus
-  extern "C"
-#endif
-const AMX_NATIVE_INFO fixed_Natives[] = {
+
+static const AMX_NATIVE_INFO natives[] = {
   { "fixed",    n_fixed },
   { "strfixed", n_strfixed },
   { "fmul",     n_fmul },
@@ -735,7 +733,7 @@ const AMX_NATIVE_INFO fixed_Natives[] = {
 
 int AMXEXPORT AMXAPI amx_FixedInit(AMX *amx)
 {
-  return amx_Register(amx,fixed_Natives,-1);
+  return amx_Register(amx,natives,-1);
 }
 
 int AMXEXPORT AMXAPI amx_FixedCleanup(AMX *amx)

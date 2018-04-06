@@ -906,10 +906,7 @@ static cell AMX_NATIVE_CALL n_procwait(AMX *amx, const cell *params)
 }
 
 
-#if defined __cplusplus
-  extern "C"
-#endif
-AMX_NATIVE_INFO ffi_Natives[] = {
+static const AMX_NATIVE_INFO natives[] = {
   { "libcall",   n_libcall },
   { "libfree",   n_libfree },
   { "procexec",  n_procexec },
@@ -921,7 +918,7 @@ AMX_NATIVE_INFO ffi_Natives[] = {
 
 int AMXEXPORT AMXAPI amx_ProcessInit(AMX *amx)
 {
-  return amx_Register(amx, ffi_Natives, -1);
+  return amx_Register(amx,natives,-1);
 }
 
 int AMXEXPORT AMXAPI amx_ProcessCleanup(AMX *amx)
