@@ -79,7 +79,9 @@ static int __ptrarray_grow(amx_ptrarray *ptrarray)
     const cell new_size=(cell)((ucell)old_size+(ucell)AMX_PTRARRAY_GROWTH);
     void **new_data;
 
-    if (new_size<old_size || (new_data=(void **)malloc(sizeof(void *)*(size_t)new_size))==NULL)
+    if (new_size<old_size)
+      return 0;
+    if ((new_data=(void **)realloc(ptrarray->data,sizeof(void *)*(size_t)new_size))==NULL)
       return 0;
     memcpy(new_data,ptrarray->data,sizeof(void *)*old_size);
     memset(&new_data[old_size],0,sizeof(void *)*AMX_PTRARRAY_GROWTH);

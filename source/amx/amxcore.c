@@ -547,10 +547,7 @@ static cell AMX_NATIVE_CALL n_random(AMX *amx,const cell *params)
 #endif
 
 
-#if defined __cplusplus
-  extern "C"
-#endif
-const AMX_NATIVE_INFO core_Natives[] = {
+static const AMX_NATIVE_INFO natives[] = {
   { "numargs",       n_numargs },
   { "getarg",        n_getarg },
   { "setarg",        n_setarg },
@@ -576,7 +573,7 @@ const AMX_NATIVE_INFO core_Natives[] = {
 
 int AMXEXPORT AMXAPI amx_CoreInit(AMX *amx)
 {
-  return amx_Register(amx, core_Natives, -1);
+  return amx_Register(amx,natives,-1);
 }
 
 int AMXEXPORT AMXAPI amx_CoreCleanup(AMX *amx)

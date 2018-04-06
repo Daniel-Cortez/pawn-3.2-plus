@@ -450,10 +450,7 @@ static cell AMX_NATIVE_CALL n_floatabs(AMX *amx,const cell *params)
     return amx_ftoc(fA);
 }
 
-#if defined __cplusplus
-  extern "C"
-#endif
-const AMX_NATIVE_INFO float_Natives[] = {
+static const AMX_NATIVE_INFO natives[] = {
   { "float",       n_float      },
   { "floatint",    n_floatint   },
   { "strfloat",    n_strfloat   },
@@ -476,7 +473,7 @@ const AMX_NATIVE_INFO float_Natives[] = {
 
 int AMXEXPORT AMXAPI amx_FloatInit(AMX *amx)
 {
-  return amx_Register(amx,float_Natives,-1);
+  return amx_Register(amx,natives,-1);
 }
 
 int AMXEXPORT AMXAPI amx_FloatCleanup(AMX *amx)

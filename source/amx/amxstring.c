@@ -991,10 +991,7 @@ err_native:
 }
 
 
-#if defined __cplusplus
-  extern "C"
-#endif
-const AMX_NATIVE_INFO string_Natives[] = {
+static const AMX_NATIVE_INFO natives[] = {
   { "ispacked",  n_ispacked },
   { "memcpy",    n_memcpy },
   { "strcat",    n_strcat },
@@ -1017,7 +1014,7 @@ const AMX_NATIVE_INFO string_Natives[] = {
 
 int AMXEXPORT AMXAPI amx_StringInit(AMX *amx)
 {
-  return amx_Register(amx, string_Natives, -1);
+  return amx_Register(amx,natives,-1);
 }
 
 int AMXEXPORT AMXAPI amx_StringCleanup(AMX *amx)

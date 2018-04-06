@@ -349,10 +349,8 @@ release_src:
   return err;
 }
 
-#if defined __cplusplus
-  extern "C"
-#endif
-AMX_NATIVE_INFO dgram_Natives[] = {
+
+static const AMX_NATIVE_INFO natives_Natives[] = {
   { "sendstring", n_sendstring },
   { "sendpacket", n_sendpacket },
   { "listenport", n_listenport },
@@ -374,7 +372,7 @@ int AMXEXPORT AMXAPI amx_DGramInit(AMX *amx)
     amx_SetUserData(amx,AMX_USERTAG('I','d','l','e'),amx_DGramIdle);
   } /* if */
 
-  return amx_Register(amx,dgram_Natives,-1);
+  return amx_Register(amx,natives,-1);
 }
 
 int AMXEXPORT AMXAPI amx_DGramCleanup(AMX *amx)

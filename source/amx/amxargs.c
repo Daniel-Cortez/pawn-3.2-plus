@@ -37,6 +37,7 @@
 #include <assert.h>
 #include "amx.h"
 #if defined __WIN32__ || defined __MSDOS__
+  #undef alloca
   #include <malloc.h>
 #endif
 #if defined __WIN32__ || defined _Windows
@@ -394,10 +395,7 @@ static cell AMX_NATIVE_CALL n_argcount(AMX *amx, const cell *params)
 }
 
 
-#if defined __cplusplus
-  extern "C"
-#endif
-const AMX_NATIVE_INFO args_Natives[] = {
+static const AMX_NATIVE_INFO natives[] = {
   { "argcount",    n_argcount },
   { "argindex",    n_argindex },
   { "argstr",      n_argstr },
@@ -407,7 +405,7 @@ const AMX_NATIVE_INFO args_Natives[] = {
 
 int AMXEXPORT AMXAPI amx_ArgsInit(AMX *amx)
 {
-  return amx_Register(amx, args_Natives, -1);
+  return amx_Register(amx, natives, -1);
 }
 
 int AMXEXPORT AMXAPI amx_ArgsCleanup(AMX *amx)

@@ -1395,10 +1395,7 @@ err_native:
 }
 
 
-#if defined __cplusplus
-  extern "C"
-#endif
-AMX_NATIVE_INFO file_Natives[] = {
+static const AMX_NATIVE_INFO natives[] = {
   { "fopen",        n_fopen },
   { "fclose",       n_fclose },
   { "fwrite",       n_fwrite },
@@ -1429,11 +1426,14 @@ AMX_NATIVE_INFO file_Natives[] = {
 
 int AMXEXPORT AMXAPI amx_FileInit(AMX *amx)
 {
-  return amx_Register(amx, file_Natives, -1);
+  if (!ptrarray_acquire(&filepool))
+    return AMX_ERR_MEMORY;
+  return amx_Register(amx,natives,-1);
 }
 
 int AMXEXPORT AMXAPI amx_FileCleanup(AMX *amx)
 {
   UNUSED_PARAM(amx);
+  ptrarray_release(&filepool);
   return AMX_ERR_NONE;
 }

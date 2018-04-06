@@ -218,6 +218,11 @@
   #define CHR_VLINE_VT100   'x'
 #endif
 
+extern int AMXEXPORT AMXAPI amx_ConsoleInit(AMX *amx);
+extern int AMXEXPORT AMXAPI amx_ConsoleCleanup(AMX *amx);
+extern int AMXEXPORT AMXAPI amx_CoreInit(AMX *amx);
+extern int AMXEXPORT AMXAPI amx_CoreCleanup(AMX *amx);
+
 enum {
   BP_NONE,
   BP_CODE,
@@ -2829,8 +2834,8 @@ extern AMX_NATIVE_INFO console_Natives[];
 
   if (remote==REMOTE_NONE) {
     /* libraries do not need to be present for remote debugging */
-    amx_Register(&amx, core_Natives, -1);
-    err = amx_Register(&amx, console_Natives, -1);
+    amx_CoreInit(amx);
+    err = amx_ConsoleInit(amx);
     if (err != AMX_ERR_NONE)
       amx_printf("Load error %d\n", err);
   } else {
@@ -2874,6 +2879,8 @@ extern AMX_NATIVE_INFO console_Natives[];
 
   //??? option for restart
 
+  amx_ConsoleCleanup(amx);
+  amx_CoreCleanup(amx);
   dbg_FreeInfo(&amxdbg);
   free(program);
 
