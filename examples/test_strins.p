@@ -50,7 +50,7 @@ main()
 	};
 
 	new bool:success;
-	new num_succ = 0, num_fails = 0;
+	new num_passed = 0, num_failed = 0;
 	for (new i = 0; i < sizeof(tests); ++i)
 	{
 		new result_size = strlen(tests[i][result]) + 1;
@@ -101,13 +101,13 @@ main()
 				buffer[15], buffer[16], buffer[17], buffer[18], buffer[19]
 			);
 		if (success)
-			num_succ++;
+			num_passed++;
 		else
-			num_fails++;
+			num_failed++;
 	}
 	printf(
 		"%d/%d passed, %d/%d failed\n",
-		num_succ, sizeof(tests),
-		num_fails, sizeof(tests)
+		num_passed, sizeof(tests),
+		num_failed, sizeof(tests)
 	);
 }
