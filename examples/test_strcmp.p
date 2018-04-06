@@ -35,23 +35,24 @@ main()
 		{ "abc",    "abcdef", 5,       -1 }
 	};
 	new result;
-	new num_succ = 0, num_fails = 0;
+	new num_passed = 0, num_failed = 0;
 	for (new i = 0; i < sizeof(tests); ++i)
 	{
 		result = strcmp(tests[i][str1], tests[i][str2], false, tests[i][nSym]);
 		printf(
-			"strcmp(\"%s\", \"%s\", false, %d): %d (should be %d)\n",
+			"#%02d [%s] strcmp(\"%s\", \"%s\", false, %d): %d (should be %d)",
+			i+1, (result == tests[i][shouldBe]) ? "OK" : "FAIL",
 			tests[i][str1], tests[i][str2], tests[i][nSym],
 			result, tests[i][shouldBe]
 		);
 		if (result == tests[i][shouldBe])
-			num_succ++;
+			num_passed++;
 		else
-			num_fails++;
+			num_failed++;
 	}
 	printf(
 		"%d/%d passed, %d/%d failed\n",
-		num_succ, sizeof(tests),
-		num_fails, sizeof(tests)
+		num_passed, sizeof(tests),
+		num_failed, sizeof(tests)
 	);
 }
