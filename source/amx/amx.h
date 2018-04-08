@@ -79,6 +79,9 @@
   #include <alloca.h>
 #endif
 #if defined __WIN32__ || defined _WIN32 || defined WIN32 /* || defined __MSDOS__ */
+  #if defined HAVE_MALLOC_H
+    #include <malloc.h>
+  #endif
   #if !defined alloca
     #define alloca(n)   _alloca(n)
   #endif

@@ -36,10 +36,6 @@
 #include <string.h>
 #include <assert.h>
 #include "amx.h"
-#if defined __WIN32__ || defined __MSDOS__
-  #undef alloca
-  #include <malloc.h>
-#endif
 #if defined __WIN32__ || defined _Windows
   #include <windows.h>
 #endif
