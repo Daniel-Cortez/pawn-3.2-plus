@@ -37,6 +37,7 @@ set(REQUIRED_INCLUDE_FILES
   "inttypes.h"
   "stdint.h"
   "alloca.h"
+  "malloc.h"
 )
 foreach(INCLUDE_FILE ${REQUIRED_INCLUDE_FILES})
   string(REGEX REPLACE "\\.|/" "_" DEFINITION_NAME "HAVE_${INCLUDE_FILE}")
