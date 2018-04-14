@@ -26,6 +26,11 @@
   #pragma optimize("g",off)
 #endif
 
+#if defined __clang__
+  #pragma clang diagnostic ignored "-Wlogical-op-parentheses"
+  #pragma clang diagnostic ignored "-Wbitwise-op-parentheses"
+#endif
+
 #define WIN32_LEAN_AND_MEAN
 #if defined _UNICODE || defined __UNICODE__ || defined UNICODE
 # if !defined UNICODE   /* for Windows API */
@@ -218,7 +223,7 @@ int AMXAPI amx_Callback(AMX *amx, cell index, cell *result, const cell *params)
 #endif
   AMX_HEADER *hdr;
   AMX_NATIVE f;
-#if !( (!defined AMX_PTR_SIZE) || (AMX_PTR_SIZE*8>PAWN_CELL_SIZE) )
+#if !( (!defined AMX_PTR_SIZE) || (AMX_PTR_SIZE>PAWN_CELL_SIZE) )
   AMX_FUNCSTUB *func;
 #endif
 
@@ -234,7 +239,7 @@ int AMXAPI amx_Callback(AMX *amx, cell index, cell *result, const cell *params)
   } else {
 #endif
     assert(index>=0 && index<(cell)NUMNATIVES(hdr));
-    #if (!defined AMX_PTR_SIZE) || (AMX_PTR_SIZE*8>PAWN_CELL_SIZE)
+    #if (!defined AMX_PTR_SIZE) || (AMX_PTR_SIZE>PAWN_CELL_SIZE)
       f=(AMX_NATIVE)amx->natives[(size_t)index];
     #else
       func=GETENTRY(hdr,natives,index);
@@ -464,7 +469,7 @@ int AMXAPI amx_Init(AMX *amx,void *program)
 
   amx->base=(unsigned char *)program;
 
-  #if (!defined AMX_PTR_SIZE) || (AMX_PTR_SIZE*8>PAWN_CELL_SIZE)
+  #if (!defined AMX_PTR_SIZE) || (AMX_PTR_SIZE>PAWN_CELL_SIZE)
     amx->libraries=NULL;
     amx->natives = NULL;
     numnatives=(int)NUMNATIVES(hdr);
@@ -567,7 +572,7 @@ int AMXAPI amx_Init(AMX *amx,void *program)
     #endif
     hdr=(AMX_HEADER *)amx->base;
     numlibraries=(int)NUMLIBRARIES(hdr);
-    #if (!defined AMX_PTR_SIZE) || (AMX_PTR_SIZE*8>PAWN_CELL_SIZE)
+    #if (!defined AMX_PTR_SIZE) || (AMX_PTR_SIZE>PAWN_CELL_SIZE)
       amx->libraries=(void **)malloc(sizeof(void *)*(size_t)numlibraries);
       if (amx->libraries==NULL)
         return AMX_ERR_MEMORY;
@@ -613,7 +618,7 @@ int AMXAPI amx_Init(AMX *amx,void *program)
         if (libinit!=NULL)
           libinit(amx);
       } /* if */
-      #if (!defined AMX_PTR_SIZE) || (AMX_PTR_SIZE*8>PAWN_CELL_SIZE)
+      #if (!defined AMX_PTR_SIZE) || (AMX_PTR_SIZE>PAWN_CELL_SIZE)
         amx->libraries[i]=(void *)hlib;
       #else
         lib->address=(ucell)hlib;
@@ -749,7 +754,7 @@ int AMXAPI amx_Cleanup(AMX *amx)
     numlibraries=NUMLIBRARIES(hdr);
     for (i=0; i<numlibraries; i++) {
       lib=GETENTRY(hdr,libraries,i);
-#if (!defined AMX_PTR_SIZE) || (AMX_PTR_SIZE*8>PAWN_CELL_SIZE)
+#if (!defined AMX_PTR_SIZE) || (AMX_PTR_SIZE>PAWN_CELL_SIZE)
       if (amx->libraries[i]!=0) {
 #else
       if (lib->address!=0) {
@@ -759,13 +764,13 @@ int AMXAPI amx_Cleanup(AMX *amx)
         strcat(funcname,GETENTRYNAME(hdr,lib));
         strcat(funcname,"Cleanup");
         #if defined _Windows
-          #if (!defined AMX_PTR_SIZE) || (AMX_PTR_SIZE*8>PAWN_CELL_SIZE)
+          #if (!defined AMX_PTR_SIZE) || (AMX_PTR_SIZE>PAWN_CELL_SIZE)
             libcleanup=(AMX_ENTRY)GetProcAddress((HINSTANCE)amx->libraries[i],funcname);
           #else
             libcleanup=(AMX_ENTRY)GetProcAddress((HINSTANCE)lib->address,funcname);
           #endif
         #elif defined LINUX || defined __FreeBSD__ || defined __OpenBSD__
-          #if (!defined AMX_PTR_SIZE) || (AMX_PTR_SIZE*8>PAWN_CELL_SIZE)
+          #if (!defined AMX_PTR_SIZE) || (AMX_PTR_SIZE>PAWN_CELL_SIZE)
             libcleanup=(AMX_ENTRY)dlsym(amx->libraries[i],funcname);
           #else
             libcleanup=(AMX_ENTRY)dlsym((void*)lib->address,funcname);
@@ -774,13 +779,13 @@ int AMXAPI amx_Cleanup(AMX *amx)
         if (libcleanup!=NULL)
           libcleanup(amx);
         #if defined _Windows
-          #if (!defined AMX_PTR_SIZE) || (AMX_PTR_SIZE*8>PAWN_CELL_SIZE)
+          #if (!defined AMX_PTR_SIZE) || (AMX_PTR_SIZE>PAWN_CELL_SIZE)
             FreeLibrary((HINSTANCE)amx->libraries[i]);
           #else
             FreeLibrary((HINSTANCE)lib->address);
           #endif
         #elif defined LINUX || defined __FreeBSD__ || defined __OpenBSD__
-          #if (!defined AMX_PTR_SIZE) || (AMX_PTR_SIZE*8>PAWN_CELL_SIZE)
+          #if (!defined AMX_PTR_SIZE) || (AMX_PTR_SIZE>PAWN_CELL_SIZE)
             dlclose(amx->libraries[i]);
           #else
             dlclose((void*)lib->address);
@@ -789,7 +794,7 @@ int AMXAPI amx_Cleanup(AMX *amx)
       } /* if */
     } /* for */
   #endif
-  #if (!defined AMX_PTR_SIZE) || (AMX_PTR_SIZE*8>PAWN_CELL_SIZE)
+  #if (!defined AMX_PTR_SIZE) || (AMX_PTR_SIZE>PAWN_CELL_SIZE)
     free(amx->libraries);
     free(amx->natives);
   #endif
@@ -1202,7 +1207,7 @@ int AMXAPI amx_Register(AMX *amx, const AMX_NATIVE_INFO *list, int number)
   err=AMX_ERR_NONE;
   func=GETENTRY(hdr,natives,0);
   for (i=0; i<numnatives; i++) {
-#if (!defined AMX_PTR_SIZE) || (AMX_PTR_SIZE*8>PAWN_CELL_SIZE)
+#if (!defined AMX_PTR_SIZE) || (AMX_PTR_SIZE>PAWN_CELL_SIZE)
     if (amx->natives[(size_t)i]==0) {
 #else
     if (func->address==0) {
@@ -1210,7 +1215,7 @@ int AMXAPI amx_Register(AMX *amx, const AMX_NATIVE_INFO *list, int number)
       /* this function is not yet located */
       funcptr=(list!=NULL) ? findfunction(GETENTRYNAME(hdr,func),list,number) : NULL;
       if (funcptr!=NULL) {
-        #if (!defined AMX_PTR_SIZE) || (AMX_PTR_SIZE*8>PAWN_CELL_SIZE)
+        #if (!defined AMX_PTR_SIZE) || (AMX_PTR_SIZE>PAWN_CELL_SIZE)
           amx->natives[(size_t)i]=(void *)funcptr;
         #else
           func->address=(ucell)funcptr;

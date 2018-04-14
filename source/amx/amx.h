@@ -281,7 +281,7 @@ typedef struct tagAMX {
     int reloc_size      PACKED; /* required temporary buffer for relocations */
     long code_size      PACKED; /* estimated memory footprint of the native code */
   #endif
-#if (!defined AMX_PTR_SIZE) || (AMX_PTR_SIZE*8>PAWN_CELL_SIZE)
+#if (!defined AMX_PTR_SIZE) || (AMX_PTR_SIZE>PAWN_CELL_SIZE)
   void **libraries      PACKED; /* physical addresses of AMX extension modules */
   void **natives        PACKED; /* physical addresses of native functions */
 #endif
