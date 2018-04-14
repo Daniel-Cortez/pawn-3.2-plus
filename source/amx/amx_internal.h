@@ -31,7 +31,7 @@
 #include "amx_opcodes.h"
 
 #if !defined AMX_DONT_RELOCATE
-  #if (!defined AMX_PTR_SIZE) || (AMX_PTR_SIZE*8>PAWN_CELL_SIZE)
+  #if (!defined AMX_PTR_SIZE) || (AMX_PTR_SIZE>PAWN_CELL_SIZE)
     #define AMX_DONT_RELOCATE
   #endif
 #endif

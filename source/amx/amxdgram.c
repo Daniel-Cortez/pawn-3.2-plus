@@ -140,7 +140,11 @@ static int udp_Send(const char *host,short port,const char *message,int size)
 static int udp_Receive(char *message,size_t maxmsg,char *source)
 {
   struct sockaddr_in sSource;
-  int slen=sizeof(sSource);
+#if defined __WIN32 || defined _WIN32 || defined WIN32
+  int slen = sizeof(sSource);
+#else
+  socklen_t slen = sizeof(sSource);
+#endif
   int size;
 
   size=recvfrom(sLocal, message, maxmsg, 0, (struct sockaddr *)&sSource, &slen);
@@ -351,7 +355,7 @@ release_src:
 }
 
 
-static const AMX_NATIVE_INFO natives_Natives[] = {
+static const AMX_NATIVE_INFO natives[] = {
   { "sendstring", n_sendstring },
   { "sendpacket", n_sendpacket },
   { "listenport", n_listenport },

@@ -2835,8 +2835,8 @@ extern AMX_NATIVE_INFO console_Natives[];
 
   if (remote==REMOTE_NONE) {
     /* libraries do not need to be present for remote debugging */
-    amx_CoreInit(amx);
-    err = amx_ConsoleInit(amx);
+    amx_CoreInit(&amx);
+    err = amx_ConsoleInit(&amx);
     if (err != AMX_ERR_NONE)
       amx_printf("Load error %d\n", err);
   } else {
@@ -2880,8 +2880,8 @@ extern AMX_NATIVE_INFO console_Natives[];
 
   //??? option for restart
 
-  amx_ConsoleCleanup(amx);
-  amx_CoreCleanup(amx);
+  amx_ConsoleCleanup(&amx);
+  amx_CoreCleanup(&amx);
   dbg_FreeInfo(&amxdbg);
   free(program);
 
