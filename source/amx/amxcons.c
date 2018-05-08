@@ -827,6 +827,11 @@ enum {
   FMT_WIDTH,  /* found digit after '%' or sign, accept digit (WIDTH), '.' (DECIM) or format letter (done) */
   FMT_DECIM,  /* found digit after '.', accept accept digit (DECIM) or format letter (done) */
 };
+enum {
+  PRINT_NONE,
+  PRINT_SINGLE,
+  PRINT_FMT
+};
 
 static int formatstate(TCHAR c,int *state,TCHAR *sign,TCHAR *decpoint,int *width,int *digits,TCHAR *filler)
 {
@@ -841,7 +846,7 @@ static int formatstate(TCHAR c,int *state,TCHAR *sign,TCHAR *decpoint,int *width
       *digits=INT_MAX;
       *filler=__T(' ');
     } else {
-      return -1;  /* print a single character */
+      return PRINT_SINGLE;  /* print a single character */
     } /* if */
     break;
   case FMT_START:
@@ -858,9 +863,9 @@ static int formatstate(TCHAR c,int *state,TCHAR *sign,TCHAR *decpoint,int *width
       *state=FMT_DECIM;
     } else if (c==__T('%')) {
       *state=FMT_NONE;
-      return -1;  /* print literal '%' */
+      return PRINT_SINGLE;  /* print literal '%' */
     } else {
-      return 1;   /* print formatted character */
+      return PRINT_FMT;   /* print formatted character */
     } /* if */
     break;
   case FMT_WIDTH:
@@ -871,19 +876,19 @@ static int formatstate(TCHAR c,int *state,TCHAR *sign,TCHAR *decpoint,int *width
       *digits=0;
       *state=FMT_DECIM;
     } else {
-      return 1;   /* print formatted character */
+      return PRINT_FMT;   /* print formatted character */
     } /* if */
     break;
   case FMT_DECIM:
     if (c>=__T('0') && c<=__T('9')) {
       *digits=*digits*10+(int)(c-__T('0'));
     } else {
-      return 1;   /* print formatted character */
+      return PRINT_FMT;   /* print formatted character */
     } /* if */
     break;
   } /* switch */
 
-  return 0;
+  return PRINT_NONE;
 }
 
 int amx_printstring(AMX *amx,cell *cstr,AMX_FMTINFO *info)
@@ -982,12 +987,12 @@ int amx_printstring(AMX *amx,cell *cstr,AMX_FMTINFO *info)
         if (c==0)
           break;
         switch (formatstate(c,&fmtstate,&sign,&decpoint,&width,&digits,&filler)) {
-        case -1:
+        case PRINT_SINGLE:
           f_putchar(user,c);
           break;
-        case 0:
+        case PRINT_NONE:
           break;
-        case 1:
+        case PRINT_FMT:
           assert(info!=NULL && info->params!=NULL);
           if (paramidx>=info->numparams)  /* insufficient parameters passed */
             amx_RaiseError(amx, AMX_ERR_NATIVE);
@@ -1007,12 +1012,12 @@ int amx_printstring(AMX *amx,cell *cstr,AMX_FMTINFO *info)
       /* the string is unpacked */
       for (i=0; cstr[i]!=0; i++) {
         switch (formatstate((TCHAR)cstr[i],&fmtstate,&sign,&decpoint,&width,&digits,&filler)) {
-        case -1:
+        case PRINT_SINGLE:
           f_putchar(user,(TCHAR)cstr[i]);
           break;
-        case 0:
+        case PRINT_NONE:
           break;
-        case 1:
+        case PRINT_FMT:
           assert(info!=NULL && info->params!=NULL);
           if (paramidx>=info->numparams)  /* insufficient parameters passed */
             amx_RaiseError(amx, AMX_ERR_NATIVE);

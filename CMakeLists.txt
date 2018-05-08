@@ -1,5 +1,5 @@
 project(pawn C)
-cmake_minimum_required(VERSION 2.6)
+cmake_minimum_required(VERSION 2.8.11 FATAL_ERROR)
 
 add_subdirectory(
   "${CMAKE_CURRENT_SOURCE_DIR}/source/amx"

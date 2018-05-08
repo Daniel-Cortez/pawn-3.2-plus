@@ -1,5 +1,5 @@
 project(pawnamx C)
-cmake_minimum_required(VERSION 2.6)
+cmake_minimum_required(VERSION 2.8.11 FATAL_ERROR)
 
 
 option(PAWN_USE_64BIT_CELLS "Use 64-bit cells (default: 32)" OFF)
@@ -9,7 +9,7 @@ option(PAWN_USE_NEW_AMXEXEC "Use the new interpreter core (amx_Exec)" ON)
 
 # Add an option to build AMX extensions as static libraries
 option(PAWN_AMX_EXTS_STATIC "Build AMX extension modules as static libraries" ON)
-if(NOT PAWN_AMX_EXTS_STATIC)
+if(PAWN_AMX_EXTS_STATIC)
   set(PAWNAMX_PRIVATE_COMPILE_DEFINITIONS ${PAWNAMX_PRIVATE_COMPILE_DEFINITIONS} "-DAMX_NODYNALOAD")
 endif()
 
@@ -197,7 +197,6 @@ function(add_amx_ext_module NAME ENABLED SOURCES)
             PROPERTY LINK_FLAGS "-Wl,-k")
         endif()
       endif() # WIN32
-      message(STATUS "amx${NAME}: STATIC")
     endif() # MODULE_STATIC
     if(${NAME} STREQUAL "DGram")
       if(WIN32)

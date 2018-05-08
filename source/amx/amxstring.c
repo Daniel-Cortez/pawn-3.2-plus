@@ -864,10 +864,9 @@ err_native:
  */
 static cell AMX_NATIVE_CALL n_uuencode(AMX *amx,const cell *params)
 {
-  cell *cdest,*cstr;
-  unsigned char src[BITMASK+2];
+  cell *cdest,*csrc;
   char dst[BITMASK+BITMASK/3+2];
-  cell numbytes;
+  cell numcells;
 
   EXPECT_PARAMS(4);
 
@@ -876,18 +875,16 @@ err_native:
     amx_RaiseError(amx,AMX_ERR_NATIVE);
     return 0;
   } /* if */
-  if (amx_GetAddr(amx,params[2],&cstr)!=AMX_ERR_NONE)
+  if (amx_GetAddr(amx,params[2],&csrc)!=AMX_ERR_NONE)
+    goto err_native;
+  numcells=(params[3]+(cell)sizeof(cell)-(cell)1)/(cell)sizeof(cell);
+  if (numcells<=0 || verify_addr(amx,params[2]+numcells)!=AMX_ERR_NONE)
     goto err_native;
   if (params[4]<=0 || verify_addr(amx,params[1]+params[4])!=AMX_ERR_NONE)
     goto err_native;
-  numbytes=params[3];
-  if (numbytes>params[4]*(cell)sizeof(cell))
-    numbytes=params[4]*(cell)sizeof(cell);
-  /* get the source */
-  amx_GetString((char *)src,cstr,0,sizeof src);
   /* encode (and check for errors) */
-  if (uuencode(dst,src,params[3])) {
-    *cstr=0;
+  if (uuencode(dst,(unsigned char *)csrc,params[3])==0) {
+    *cdest=(cell)'\0';
     return 0;
   } /* if */
   /* always add a \n */
