@@ -1,7 +1,8 @@
-# Copyright (c) 2015-2017 Stanislav Gromov.
+# Copyright (c) 2015-2018 Stanislav Gromov.
 
 include("CheckCSourceCompiles")
 include("CheckIncludeFile")
+include("TestBigEndian")
 
 
 if(PAWN_USE_64BIT_CELLS)
@@ -47,7 +48,6 @@ foreach(INCLUDE_FILE ${REQUIRED_INCLUDE_FILES})
 endforeach()
 
 # Check whether the target platform has Big Endian or Little Endian byte order
-include(TestBigEndian)
 test_big_endian(BYTE_ORDER_BIG_ENDIAN)
 if(BYTE_ORDER_BIG_ENDIAN)
   set(SHARED_COMPILE_DEFINITIONS ${SHARED_COMPILE_DEFINITIONS} "-DBYTE_ORDER=BIG_ENDIAN")

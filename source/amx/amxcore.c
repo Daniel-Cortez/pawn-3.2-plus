@@ -168,7 +168,7 @@ static cell AMX_NATIVE_CALL n_getarg(AMX *amx,const cell *params)
   amx_GetAddr(amx,amx->frm+2*(cell)sizeof(cell),&cptr);
   assert(cptr!=NULL);
   numargs=(*cptr)/(cell)sizeof(cell);
-  if (params[1]>=numargs)
+  if ((ucell)params[1]>=(ucell)numargs)
     return 0;
   /* get the base value */
   if (amx_GetAddr(amx,amx->frm+(3+params[1])*(cell)sizeof(cell),&cptr)!=AMX_ERR_NONE) {
@@ -195,7 +195,7 @@ static cell AMX_NATIVE_CALL n_setarg(AMX *amx,const cell *params)
   amx_GetAddr(amx,amx->frm+2*(cell)sizeof(cell),&cptr);
   assert(cptr!=NULL);
   numargs=(*cptr)/(cell)sizeof(cell);
-  if (params[1]>=numargs)
+  if ((ucell)params[1]>=(ucell)numargs)
     return 0;
   /* get the base value */
   if (amx_GetAddr(amx,amx->frm+(3+params[1])*(cell)sizeof(cell),&cptr)!=AMX_ERR_NONE) {
@@ -460,7 +460,7 @@ err_native:
 }
 
 /* deleteproperty(id=0, const name[]="", value=cellmin) */
-static cell AMX_NATIVE_CALL n_delproperty(AMX *amx,const cell *params)
+static cell AMX_NATIVE_CALL n_deleteproperty(AMX *amx,const cell *params)
 {
   cell prev;
   cell *cstr;
@@ -563,7 +563,7 @@ static const AMX_NATIVE_INFO natives[] = {
 #if !defined AMX_NOPROPLIST
   { "getproperty",   n_getproperty },
   { "setproperty",   n_setproperty },
-  { "deleteproperty",n_delproperty },
+  { "deleteproperty",n_deleteproperty },
   { "existproperty", n_existproperty },
 #endif
 #if !defined AMX_NORANDOM
