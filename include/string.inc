@@ -30,6 +30,8 @@ native strformat(dest[], size=sizeof dest, bool:pack=false, const format[], {Fix
 
 native uudecode(dest[], const source[], maxlength=sizeof dest);
 native uuencode(dest[], const source[], numbytes, maxlength=sizeof dest);
+native urlencode(dest[], const source[], maxlength=sizeof dest, bool:pack=false);
+native urldecode(dest[], const source[], maxlength=sizeof dest, bool:pack=false);
 native memcpy(dest[], const source[], index=0, numbytes, maxlength=sizeof dest);
 
 stock bool: strequal(const string1[], const string2[], bool:ignorecase=false, length=cellmax)
