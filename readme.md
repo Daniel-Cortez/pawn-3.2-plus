@@ -44,6 +44,9 @@ native operator=(Float:oper) = floatint;
 
 ```Pawn
 native strcopy(dest[], const source[], maxlength=sizeof dest);
+
+native urlencode(dest[], const source[], maxlength=sizeof dest, bool:pack=false);
+native urldecode(dest[], const source[], maxlength=sizeof dest, bool:pack=false);
 ```
 </li>
 
@@ -88,6 +91,10 @@ There are also fixes for already existing native functions:
 
 <li>strdel
 <br/>Fixed the function being prone to an out of bounds access when the position of the first character to remove (the <code>start</code> argument) is negative.
+</li>
+
+<li>uuencode
+<br/>Fixed the function not encoding data properly (<code>n_uuencode()</code> misinterpreted the return value from <code>uuencode()</code> and returned an empty string instead of encoded data).
 </li>
 
 <li>getarg
