@@ -288,7 +288,7 @@ typedef struct tagAMX {
 } AMX;
 
 /* The AMX_HEADER structure is both the memory format as the file format. The
- * structure is used internaly.
+ * structure is used internally.
  */
 typedef struct tagAMX_HEADER {
   int32_t size          PACKED; /* size of the "file" */

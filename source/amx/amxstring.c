@@ -125,7 +125,7 @@ static int amx_StrPack(cell *dest,cell *source,int len,int offs)
       mask=(~(ucell)0) >> (offs*CHARBITS);
       c=(*dest & ~mask) >> ((sizeof(cell)-offs)*CHARBITS);
     } /* if */
-    /* for proper alignement, add the offset to both the starting and the ending
+    /* for proper alignment, add the offset to both the starting and the ending
      * criterion (so that the number of iterations stays the same)
      */
     assert(offs>=0 && offs<sizeof(cell));
@@ -958,7 +958,7 @@ err_native:
   str[idx_dst]='\0';
 
   /* store */
-  amx_SetString(cdest,str,1,0,params[4]); /* store as packed ot unpacked */
+  amx_SetString(cdest,str,1,0,params[4]); /* store as packed or unpacked */
 
   return idx_dst;
 }
@@ -1033,7 +1033,7 @@ err_native:
   assert(destlen==0);
 
   /* store the result */
-  amx_SetString(cdest,str,1,0,params[4]); /* store as packed ot unpacked */
+  amx_SetString(cdest,str,1,0,params[4]); /* store as packed or unpacked */
 
   return strlen(str);
 }

@@ -4130,7 +4130,7 @@ int AMXAPI amx_UTF8Check(const char *string, int *length)
 
 /* amx_UTF8Len()
  * Run through a wide string and return how many 8-bit characters are needed to
- * store the string in UTF-8 format. The returned cound excludes the terminating
+ * store the string in UTF-8 format. The returned count excludes the terminating
  * zero byte. The function returns an error code.
  */
 int AMXAPI amx_UTF8Len(const cell *cstr, int *length)

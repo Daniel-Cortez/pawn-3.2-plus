@@ -133,7 +133,7 @@ int AMXAPI aux_LoadProgram(AMX *amx, const char *filename)
     goto fail;
 
   /* The compiled code is relocatable, since only relative jumps are
-   * used for destinations within the generated code and absoulute
+   * used for destinations within the generated code and absolute
    * addresses for jumps into the runtime, which is fixed in memory.
    */
   error = AMX_ERR_MEMORY;       /* assume "insufficient memory" */

@@ -430,7 +430,7 @@ static cell AMX_NATIVE_CALL n_fdiv(AMX *amx,const cell *params)
   /* add half of the divisor, to round the data */
   b[0]+=(ucell)divisor/2;
   if (b[0]<(ucell)divisor/2)
-    b[1]+=1;  /* wrap-around ocurred */
+    b[1]+=1;  /* wrap-around occurred */
 
   /* if the divisor is smaller than b[1], the result will not fit in a cell */
   if ((ucell)divisor<b[1]) {
