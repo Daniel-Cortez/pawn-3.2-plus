@@ -520,7 +520,8 @@ static int cons_putchar(void *dest,TCHAR ch)
 
 enum {
   SV_DECIMAL,
-  SV_HEX
+  SV_HEX,
+  SV_BIN
 };
 
 static TCHAR *reverse(TCHAR *string,int stop)
@@ -554,7 +555,8 @@ static TCHAR *amx_strval(TCHAR buffer[], long value, int format, int width)
 	TCHAR temp;
 
 	start = stop = 0;
-	if (format == SV_DECIMAL) {
+	switch (format) {
+	case SV_DECIMAL:
 		if (value < 0) {
 			buffer[0] = __T('-');
 			start = stop = 1;
@@ -564,8 +566,8 @@ static TCHAR *amx_strval(TCHAR buffer[], long value, int format, int width)
 			buffer[stop++] = (TCHAR)((value % 10) + __T('0'));
 			value /= 10;
 		} while (value > 0);
-	} else {
-		/* hexadecimal */
+		break;
+	case SV_HEX: {
 		unsigned long v = (unsigned long)value;	/* copy to unsigned value for shifting */
 		do {
 			buffer[stop] = (TCHAR)((v & 0x0f) + __T('0'));
@@ -574,7 +576,20 @@ static TCHAR *amx_strval(TCHAR buffer[], long value, int format, int width)
 			v >>= 4;
 			stop++;
 		} while (v != 0);
-	} /* if */
+		break;
+	} /* case */
+	case SV_BIN: {
+		unsigned long v = (unsigned long)value;	/* copy to unsigned value for shifting */
+		do {
+			buffer[stop] = (TCHAR)((v & 0x01) + __T('0'));
+			v >>= 1;
+			stop++;
+		} while (v != 0);
+		break;
+	} /* case */
+	default:
+		assert(0);
+	} /* switch */
 
 	/* pad to given width */
 	if (width < 0) {
@@ -809,6 +824,27 @@ err_native:
       while (width-->0)
         f_putchar(user,filler);
     amx_strval(buffer,(long)*cptr,SV_HEX,0);
+    f_putstr(user,buffer);
+    while (width-->0)
+      f_putchar(user,filler);
+    return 1;
+  } /* case */
+
+  case __T('b'): {
+    ucell value;
+    int length=1;
+    if (amx_GetAddr(amx,param,&cptr)!=AMX_ERR_NONE)
+      goto err_native;
+    value=*(ucell*)cptr;
+    while (value>=0x02) {
+      length++;
+      value>>=1;
+    } /* while */
+    width-=length;
+    if (sign!=__T('-'))
+      while (width-->0)
+        f_putchar(user,filler);
+    amx_strval(buffer,(long)*cptr,SV_BIN,0);
     f_putstr(user,buffer);
     while (width-->0)
       f_putchar(user,filler);
