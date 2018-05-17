@@ -3,8 +3,6 @@
 
 main()
 {
-	static buffer[20];
-
 	enum eStrCmpBugfixTest
 	{
 		source[16],
@@ -39,6 +37,8 @@ main()
 		// both are a 1-cell array filled with zero bytes.
 		// If the "string" argument is an empty string, then the resulting
 		// string is packed if "substr" is packed, and unpacked otherwise.
+		// Since the resulting string in the cases below is supposed to be
+		// unpacked, a 1-cell buffer would only fit a null character.
 	/*#16*/{	!"",		!"123",	0,	4 char,	!"123"		},
 	/*#17*/{	!"",		!"123",	0,	3 char,	!"123"		},
 	/*#18*/{	!"",		!"123",	0,	4,		!"123"		},
@@ -49,6 +49,7 @@ main()
 	/*#22*/{	"",			"",		0,	1,		""			}
 	};
 
+	new buffer[20];
 	new bool:success;
 	new num_passed = 0, num_failed = 0;
 	for (new i = 0; i < sizeof(tests); ++i)
@@ -58,7 +59,7 @@ main()
 			result_size = result_size char;
 		buffer[0] = '\0';
 		for (new j = 1; j < sizeof(buffer); ++j)
-			buffer[j] = charmax;
+			buffer[j] = 0xFFFFFFFF;
 		strcat(buffer, tests[i][source]);
 		strins(buffer, tests[i][substr], tests[i][offset], tests[i][maxlen]);
 		success = true;
@@ -72,7 +73,7 @@ main()
 		printf(
 			"#%02d: [%s] strins(%s\"%s\", %s\"%s\", %d, %d): %s\"%s\" (should be %s\"%s\")\n",
 			i,
-			(success ? "OK" : "FAIL"),
+			(success ? "OK" : "FAILED"),
 			(ispacked(tests[i][source]) ? "!" : ""),
 			tests[i][source],
 			(ispacked(tests[i][substr]) ? "!" : ""),
@@ -86,15 +87,15 @@ main()
 		);
 		for (new j = result_size; j < sizeof(buffer); ++j)
 		{
-			if (buffer[j] == charmax)
+			if (buffer[j] == 0xFFFFFFFF)
 				continue;
 			printf("#%02d: Buffer overrun detected!\n", i);
 			success = false;
 			break;
 		}
 		if (!success)
-		    printf(
-				"Buffer contents: %x %x %x %x %x %x %x %x %x %x %x %x %x %x %x %x %x %x %x %x\n",
+			printf(
+				"Buffer contents: %08x %08x %08x %08x %08x %08x %08x %08x %08x %08x %08x %08x %08x %08x %08x %08x %08x %08x %08x %08x\n",
 				buffer[0], buffer[1], buffer[2], buffer[3], buffer[4],
 				buffer[5], buffer[6], buffer[7], buffer[8], buffer[9],
 				buffer[10], buffer[11], buffer[12], buffer[13], buffer[14],
