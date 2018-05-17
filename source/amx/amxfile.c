@@ -211,7 +211,7 @@ static size_t fgets_cell(FILE *fp,cell *string,size_t max,int utf8mode)
         if (--follow==0) {
           /* encoding a character in more bytes than is strictly needed,
            * is not really valid UTF-8; we are strict here to increase
-           * the chance of heuristic dectection of non-UTF-8 text
+           * the chance of heuristic detection of non-UTF-8 text
            * (JAVA writes zero bytes as a 2-byte code UTF-8, which is invalid)
            */
           if (string[index]<lowmark)
@@ -409,7 +409,7 @@ static char *completename(TCHAR *dest, TCHAR *src, size_t size)
     } /* if */
     assert(_tcslen(dest)<size);
 
-    /* for DOS/Windows and Unix/Linux, skip everyting up to a comma, because
+    /* for DOS/Windows and Unix/Linux, skip everything up to a comma, because
      * this is used to indicate a protocol (e.g. file://C:/myfile.txt)
      */
     #if DIRSEP_CHAR!=':'

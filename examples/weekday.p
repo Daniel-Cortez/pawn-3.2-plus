@@ -43,7 +43,7 @@ main()
 /**
  * <summary>
  *   The core function of Zeller's congruence algorithm. The function
- *   works for the Gregorian calender.
+ *   works for the Gregorian calendar.
  * </summary>
  *
  * <param name="day">

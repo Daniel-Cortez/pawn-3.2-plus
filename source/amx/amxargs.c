@@ -61,7 +61,7 @@
 #if !defined AMXARGS_COLON
   #if defined __WIN32__ || defined _WIN32 || defined WIN32 || defined __MSDOS__
     /* A ':' is also a separator for filenames (the disk drive identifier), and
-     * therefore it is better not to use it as an name/value seperator for
+     * therefore it is better not to use it as an name/value separator for
      * command line argiments as well. So, by default, the library uses only
      * the '=' as the name/value separator.
      */
