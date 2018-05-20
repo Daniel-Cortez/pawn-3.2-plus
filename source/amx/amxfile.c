@@ -635,8 +635,7 @@ static cell AMX_NATIVE_CALL n_fputchar(AMX *amx, const cell *params)
     assert(result==0 || result==1);
     return result;
   } /* if */
-  fputc((int)params[2],(FILE*)params[1]);
-  return 1;
+  return (fputc((int)params[2],(FILE*)params[1])!=EOF);
 }
 
 /* fgetchar(File: handle, bool: utf8 = true) */
@@ -723,7 +722,7 @@ err_native:
   for (count=0; count<max; count++) {
     ucell v;
     if (fread(&v,sizeof(cell),1,f)!=1)
-      break;          /* write error */
+      break;          /* read error */
     *(ucell *)(cptr++)=*aligncell(&v);
   } /* for */
   return count;
