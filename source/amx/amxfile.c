@@ -20,6 +20,7 @@
  *
  *  Version: $Id: amxfile.c 3764 2007-05-22 10:29:16Z thiadmer $
  */
+
 #if defined _UNICODE || defined __UNICODE__ || defined UNICODE
 # if !defined UNICODE   /* for Windows */
 #   define UNICODE

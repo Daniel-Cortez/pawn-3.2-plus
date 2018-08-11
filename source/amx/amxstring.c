@@ -20,6 +20,7 @@
  *
  *  Version: $Id: amxstring.c 3827 2007-10-16 14:53:31Z thiadmer $
  */
+
 #include <limits.h>
 #include <string.h>
 #include <assert.h>
