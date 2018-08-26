@@ -25,6 +25,7 @@
 
 #include <assert.h>
 #include <stdio.h>
+#include <string.h>
 #include "amx.h"
 #if defined __WIN32 || defined _WIN32 || defined WIN32
   #include <malloc.h>
