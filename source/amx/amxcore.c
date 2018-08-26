@@ -74,11 +74,12 @@ typedef struct _property_list {
   cell id;
   char *name;
   cell value;
+  struct tagAMX *owning_amx;
 } proplist;
 
-static proplist proproot = { NULL, 0, NULL, 0 };
+static proplist proproot = { NULL, 0, NULL, 0, NULL };
 
-static proplist *list_additem(proplist *root)
+static proplist *list_additem(proplist *root, AMX *owning_amx)
 {
   proplist *item;
 
@@ -89,6 +90,7 @@ static proplist *list_additem(proplist *root)
   item->id=0;
   item->value=0;
   item->next=root->next;
+  item->owning_amx=owning_amx;
   root->next=item;
   return item;
 }
@@ -444,7 +446,7 @@ err_native:
   str=MakePackedString(cname);
   item=list_finditem(&proproot,params[1],str,params[3],NULL);
   if (item==NULL)
-    item=list_additem(&proproot);
+    item=list_additem(&proproot,amx);
   if (item==NULL) {
     amx_RaiseError(amx,AMX_ERR_MEMORY);
   } else {
@@ -581,8 +583,15 @@ int AMXEXPORT AMXAPI amx_CoreCleanup(AMX *amx)
 {
   (void)amx;
   #if !defined AMX_NOPROPLIST
-    while (proproot.next!=NULL)
-      list_delete(&proproot,proproot.next);
+    /* delete only the properties owned by the unloaded program */
+    proplist *pred=&proproot,*item,*next=proproot.next;
+    while ((item=next)!=NULL) {
+      next=item->next;
+      if (item->owning_amx==amx)
+        list_delete(pred,item);
+      else
+        pred=item;
+    } /* while */
   #endif
   return AMX_ERR_NONE;
 }
