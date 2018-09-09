@@ -48,6 +48,9 @@ int VerifyRelocateBytecode(AMX *amx);
   #define RELOC_DATA_OFFS(data,argaddr) ((void)(data),(void)(argaddr))
 #endif
 
+#define SYSREQ_FLAG_D   0x01
+#define SYSREQ_FLAG_ND  0x02
+
 
 #if defined _MSC_VER
   #define VHANDLER_CALL __fastcall
@@ -67,7 +70,7 @@ typedef struct tagVERIFICATION_DATA {
   unsigned char *code;
   unsigned char *data;
   ucell num_natives;
-  ucell codesize, datasize, stacksize;
+  ucell codesize,datasize,stacksize;
   int sysreq_flag;
   int err;
 } VERIFICATION_DATA;
@@ -87,13 +90,13 @@ static int VHANDLER_CALL v_parm1_codeoffs(VERIFICATION_DATA *vdata)
 {
   cell *arg_addr;
 
-  arg_addr=PARAMADDR(vdata->cip, 1);
-  if (IS_INVALID_CODE_OFFS_NORELOC(*arg_addr, vdata->codesize)) {
+  arg_addr=PARAMADDR(vdata->cip,1);
+  if (IS_INVALID_CODE_OFFS_NORELOC(*arg_addr,vdata->codesize)) {
     vdata->err=AMX_ERR_BOUNDS;
     return -1;
-  }
+  } /* if */
 
-  RELOC_CODE_OFFS(vdata->code, arg_addr);
+  RELOC_CODE_OFFS(vdata->code,arg_addr);
   return 1;
 }
 
@@ -101,13 +104,13 @@ static int VHANDLER_CALL v_parm1_dataoffs(VERIFICATION_DATA *vdata)
 {
   cell *arg_addr;
 
-  arg_addr=PARAMADDR(vdata->cip, 1);
-  if (IS_INVALID_DATA_OFFS(*arg_addr, vdata->datasize)) {
+  arg_addr=PARAMADDR(vdata->cip,1);
+  if (IS_INVALID_DATA_OFFS(*arg_addr,vdata->datasize)) {
     vdata->err=AMX_ERR_BOUNDS;
     return -1;
-  }
+  } /* if */
 
-  RELOC_DATA_OFFS(vdata->data, arg_addr);
+  RELOC_DATA_OFFS(vdata->data,arg_addr);
   return 1;
 }
 
@@ -123,18 +126,18 @@ static int VHANDLER_CALL v_parm2_dataoffs(VERIFICATION_DATA *vdata)
   const ucell datasize=vdata->datasize;
   cell *arg_addr;
 
-  arg_addr=PARAMADDR(cip, 1);
-  if (IS_INVALID_DATA_OFFS(*arg_addr, datasize)) {
+  arg_addr=PARAMADDR(cip,1);
+  if (IS_INVALID_DATA_OFFS(*arg_addr,datasize)) {
 err:
     vdata->err=AMX_ERR_BOUNDS;
     return -1;
-  }
-  RELOC_DATA_OFFS(data, arg_addr);
+  } /* if */
+  RELOC_DATA_OFFS(data,arg_addr);
 
-  arg_addr=PARAMADDR(cip, 2);
-  if (IS_INVALID_DATA_OFFS(*arg_addr, datasize))
+  arg_addr=PARAMADDR(cip,2);
+  if (IS_INVALID_DATA_OFFS(*arg_addr,datasize))
     goto err;
-  RELOC_DATA_OFFS(data, arg_addr);
+  RELOC_DATA_OFFS(data,arg_addr);
 
   return 2;
 }
@@ -161,26 +164,26 @@ static int VHANDLER_CALL v_parm3_dataoffs(VERIFICATION_DATA *vdata)
   cell *arg_addr;
   cell arg;
 
-  arg_addr=PARAMADDR(cip, 1);
+  arg_addr=PARAMADDR(cip,1);
   arg=*arg_addr;
-  if (IS_INVALID_DATA_OFFS(arg, datasize)) {
+  if (IS_INVALID_DATA_OFFS(arg,datasize)) {
 err:
     vdata->err=AMX_ERR_BOUNDS;
     return -1;
-  }
-  RELOC_DATA_OFFS(data, arg_addr);
+  } /* if */
+  RELOC_DATA_OFFS(data,arg_addr);
 
-  arg_addr=PARAMADDR(cip, 2);
+  arg_addr=PARAMADDR(cip,2);
   arg=*arg_addr;
-  if (IS_INVALID_DATA_OFFS(arg, datasize))
+  if (IS_INVALID_DATA_OFFS(arg,datasize))
     goto err;
-  RELOC_DATA_OFFS(data, arg_addr);
+  RELOC_DATA_OFFS(data,arg_addr);
 
-  arg_addr=PARAMADDR(cip, 3);
+  arg_addr=PARAMADDR(cip,3);
   arg=*arg_addr;
-  if (IS_INVALID_DATA_OFFS(arg, datasize))
+  if (IS_INVALID_DATA_OFFS(arg,datasize))
     goto err;
-  RELOC_DATA_OFFS(data, arg_addr);
+  RELOC_DATA_OFFS(data,arg_addr);
 
   return 3;
 }
@@ -198,32 +201,32 @@ static int VHANDLER_CALL v_parm4_dataoffs(VERIFICATION_DATA *vdata)
   cell *arg_addr;
   cell arg;
 
-  arg_addr=PARAMADDR(cip, 1);
+  arg_addr=PARAMADDR(cip,1);
   arg=*arg_addr;
-  if (IS_INVALID_DATA_OFFS(arg, datasize)) {
+  if (IS_INVALID_DATA_OFFS(arg,datasize)) {
 err:
     vdata->err=AMX_ERR_BOUNDS;
     return -1;
-  }
-  RELOC_DATA_OFFS(data, arg_addr);
+  } /* if */
+  RELOC_DATA_OFFS(data,arg_addr);
 
-  arg_addr=PARAMADDR(cip, 2);
+  arg_addr=PARAMADDR(cip,2);
   arg=*arg_addr;
-  if (IS_INVALID_DATA_OFFS(arg, datasize))
+  if (IS_INVALID_DATA_OFFS(arg,datasize))
     goto err;
-  RELOC_DATA_OFFS(data, arg_addr);
+  RELOC_DATA_OFFS(data,arg_addr);
 
-  arg_addr=PARAMADDR(cip, 3);
+  arg_addr=PARAMADDR(cip,3);
   arg=*arg_addr;
-  if (IS_INVALID_DATA_OFFS(arg, datasize))
+  if (IS_INVALID_DATA_OFFS(arg,datasize))
     goto err;
-  RELOC_DATA_OFFS(data, arg_addr);
+  RELOC_DATA_OFFS(data,arg_addr);
 
-  arg_addr=PARAMADDR(cip, 4);
+  arg_addr=PARAMADDR(cip,4);
   arg=*arg_addr;
-  if (IS_INVALID_DATA_OFFS(arg, datasize))
+  if (IS_INVALID_DATA_OFFS(arg,datasize))
     goto err;
-  RELOC_DATA_OFFS(data, arg_addr);
+  RELOC_DATA_OFFS(data,arg_addr);
 
   return 4;
 }
@@ -241,38 +244,38 @@ static int VHANDLER_CALL v_parm5_dataoffs(VERIFICATION_DATA *vdata)
   cell *arg_addr;
   cell arg;
 
-  arg_addr=PARAMADDR(cip, 1);
+  arg_addr=PARAMADDR(cip,1);
   arg=*arg_addr;
-  if (IS_INVALID_DATA_OFFS(arg, datasize)) {
+  if (IS_INVALID_DATA_OFFS(arg,datasize)) {
 err:
     vdata->err=AMX_ERR_BOUNDS;
     return -1;
-  }
-  RELOC_DATA_OFFS(data, arg_addr);
+  } /* if */
+  RELOC_DATA_OFFS(data,arg_addr);
 
-  arg_addr=PARAMADDR(cip, 2);
+  arg_addr=PARAMADDR(cip,2);
   arg=*arg_addr;
-  if (IS_INVALID_DATA_OFFS(arg, datasize))
+  if (IS_INVALID_DATA_OFFS(arg,datasize))
     goto err;
-  RELOC_DATA_OFFS(data, arg_addr);
+  RELOC_DATA_OFFS(data,arg_addr);
 
-  arg_addr=PARAMADDR(cip, 3);
+  arg_addr=PARAMADDR(cip,3);
   arg=*arg_addr;
-  if (IS_INVALID_DATA_OFFS(arg, datasize))
+  if (IS_INVALID_DATA_OFFS(arg,datasize))
     goto err;
-  RELOC_DATA_OFFS(data, arg_addr);
+  RELOC_DATA_OFFS(data,arg_addr);
 
-  arg_addr=PARAMADDR(cip, 4);
+  arg_addr=PARAMADDR(cip,4);
   arg=*arg_addr;
-  if (IS_INVALID_DATA_OFFS(arg, datasize))
+  if (IS_INVALID_DATA_OFFS(arg,datasize))
     goto err;
-  RELOC_DATA_OFFS(data, arg_addr);
+  RELOC_DATA_OFFS(data,arg_addr);
 
-  arg_addr=PARAMADDR(cip, 5);
+  arg_addr=PARAMADDR(cip,5);
   arg=*arg_addr;
-  if (IS_INVALID_DATA_OFFS(arg, datasize))
+  if (IS_INVALID_DATA_OFFS(arg,datasize))
     goto err;
-  RELOC_DATA_OFFS(data, arg_addr);
+  RELOC_DATA_OFFS(data,arg_addr);
 
   return 5;
 }
@@ -285,17 +288,17 @@ static int VHANDLER_CALL v_invalid(VERIFICATION_DATA *vdata)
 
 static int VHANDLER_CALL v_lodb_i_strb_i(VERIFICATION_DATA *vdata)
 {
-  const cell arg=*PARAMADDR(vdata->cip, 1);
+  const cell arg=*PARAMADDR(vdata->cip,1);
   if (AMX_UNLIKELY(arg!=1 && arg!=2 && arg!=4)) {
     vdata->err=AMX_ERR_PARAMS;
     return -1;
-  }
+  } /* if */
   return 1;
 }
 
 static int VHANDLER_CALL v_lctrl(VERIFICATION_DATA *vdata)
 {
-  cell *arg_addr=PARAMADDR(vdata->cip, 1);
+  cell *arg_addr=PARAMADDR(vdata->cip,1);
   const cell arg=*arg_addr;
   if (AMX_UNLIKELY(arg<0)) {
     vdata->err=AMX_ERR_PARAMS;
@@ -308,7 +311,7 @@ static int VHANDLER_CALL v_lctrl(VERIFICATION_DATA *vdata)
 
 static int VHANDLER_CALL v_sctrl(VERIFICATION_DATA *vdata)
 {
-  cell *arg_addr=PARAMADDR(vdata->cip, 1);
+  cell *arg_addr=PARAMADDR(vdata->cip,1);
   const cell arg=*arg_addr;
   switch (arg) {
   case 0:
@@ -316,8 +319,8 @@ static int VHANDLER_CALL v_sctrl(VERIFICATION_DATA *vdata)
   case 3:
   case 7:
   replace_id:
-    *arg_addr = (cell)-1; /* replace unknown/read-only ID by -1 */
-    /* drop through */
+    *arg_addr=(cell)-1; /* replace unknown/read-only ID by -1 */
+    /* fallthrough */
   case 2:
   case 4:
   case 5:
@@ -335,13 +338,13 @@ static int VHANDLER_CALL v_sctrl(VERIFICATION_DATA *vdata)
 
 static int VHANDLER_CALL v_stack_heap(VERIFICATION_DATA *vdata)
 {
-  cell arg=*PARAMADDR(vdata->cip, 1);
+  cell arg=*PARAMADDR(vdata->cip,1);
   if (arg<0)
     arg=-arg;
   if ((ucell)arg>=vdata->stacksize) {
     vdata->err=AMX_ERR_BOUNDS;
     return -1;
-  }
+  } /* if */
   return 1;
 }
 
@@ -352,7 +355,7 @@ static int VHANDLER_CALL v_jrel(VERIFICATION_DATA *vdata)
   if (IS_INVALID_CODE_OFFS_NORELOC(tgt,vdata->codesize)) {
     vdata->err=AMX_ERR_BOUNDS;
     return -1;
-  }
+  } /* if */
   return 1;
 }
 
@@ -364,7 +367,7 @@ static int VHANDLER_CALL v_sysreq(VERIFICATION_DATA *vdata)
   cell const *cip=vdata->cip;
   cell arg;
 
-  arg=*PARAMADDR(cip, 1);
+  arg=*PARAMADDR(cip,1);
 #if defined AMX_NATIVETABLE
   if (arg>(*(cell *)&vdata->num_natives)) {
 #else
@@ -372,29 +375,29 @@ static int VHANDLER_CALL v_sysreq(VERIFICATION_DATA *vdata)
 #endif
     vdata->err=AMX_ERR_BOUNDS;
     return -1;
-  }
+  } /* if */
 
   if (*cip==(cell)OP_SYSREQ_C) {
-    if (AMX_UNLIKELY(vdata->sysreq_flag&0x02)) {
+    if (AMX_UNLIKELY(vdata->sysreq_flag & SYSREQ_FLAG_ND)) {
       vdata->err=AMX_ERR_ASSERT;
       return -1;
-    }
-    vdata->sysreq_flag|=0x01;
+    } /* if */
+    vdata->sysreq_flag |= SYSREQ_FLAG_D;
     return 1;
-  }
+  } /* if */
 
-  if (AMX_UNLIKELY(vdata->sysreq_flag&0x01)) {
+  if (AMX_UNLIKELY(vdata->sysreq_flag & SYSREQ_FLAG_D)) {
     vdata->err=AMX_ERR_ASSERT;
     return -1;
-  }
-  arg=*PARAMADDR(cip, 2);
+  } /* if */
+  arg=*PARAMADDR(cip,2);
   if (arg<0)
     arg=-arg;
   if (*(ucell *)&arg>=vdata->stacksize) {
     vdata->err=AMX_ERR_BOUNDS;
     return -1;
-  }
-  vdata->sysreq_flag|=0x02;
+  } /* if */
+  vdata->sysreq_flag |= SYSREQ_FLAG_ND;
 
   return 2;
 }
@@ -403,26 +406,26 @@ static int VHANDLER_CALL v_switch(VERIFICATION_DATA *vdata)
 {
   unsigned char const *code=vdata->code;
   const cell *cip=vdata->cip;
-  const cell *arg_addr=PARAMADDR(cip, 1);
+  const cell *arg_addr=PARAMADDR(cip,1);
   const cell arg=*arg_addr;
 
-  if (IS_INVALID_CODE_OFFS_NORELOC(arg, vdata->codesize)) {
+  if (IS_INVALID_CODE_OFFS_NORELOC(arg,vdata->codesize)) {
     vdata->err=AMX_ERR_BOUNDS;
     return -1;
-  }
-  if (AMX_UNLIKELY(*CELLADDR(code, arg) != (cell)OP_CASETBL)) {
+  } /* if */
+  if (AMX_UNLIKELY(*CELLADDR(code,arg)!=(cell)OP_CASETBL)) {
     vdata->err=AMX_ERR_PARAMS;
     return -1;
-  }
+  } /* if */
 
-  RELOC_CODE_OFFS(code, arg_addr);
+  RELOC_CODE_OFFS(code,arg_addr);
 
   return 1;
 }
 
 static int VHANDLER_CALL v_casetbl(VERIFICATION_DATA *vdata)
 {
-  AMX_REGISTER_VAR ucell i, num_args;
+  AMX_REGISTER_VAR ucell i,num_args;
   cell const *cip=vdata->cip;
   const ucell codesize=vdata->codesize;
   unsigned char const *code=vdata->code;
@@ -433,16 +436,16 @@ static int VHANDLER_CALL v_casetbl(VERIFICATION_DATA *vdata)
    * through all of the case table entries and verify jump addresses
    * (also check the "default" branch jump address in the 2'nd argument)
    */
-  num_args=2+((int)*PARAMADDR(cip, 1))*2;
+  num_args=2+((int)*PARAMADDR(cip,1))*2;
   for (i=2; i<=num_args; i+=2) {
-    arg_addr=PARAMADDR(cip, i);
+    arg_addr=PARAMADDR(cip,i);
     arg=*arg_addr;
-    if (IS_INVALID_CODE_OFFS_NORELOC(arg, codesize)) {
+    if (IS_INVALID_CODE_OFFS_NORELOC(arg,codesize)) {
       vdata->err=AMX_ERR_BOUNDS;
       return -1;
-    }
-    RELOC_CODE_OFFS(code, arg_addr);
-  }
+    } /* if */
+    RELOC_CODE_OFFS(code,arg_addr);
+  } /* for */
 
   return num_args;
 }
@@ -635,17 +638,15 @@ int VerifyRelocateBytecode(AMX *amx)
   VERIFICATION_DATA vdata;
   AMX_HEADER const *hdr=(AMX_HEADER *)amx->base;
   cell *code_end;
-  AMX_REGISTER_VAR size_t op;
-  AMX_REGISTER_VAR int num_args;
+  int i;
 
   amx->flags |= AMX_FLAG_BROWSE;
 #if defined AMX_EXEC_USE_JUMP_TABLE && !defined AMX_DONT_RELOCATE
-  if (NULL == amx_exec_jump_table) {
-    amx_Exec(amx, (cell*)(void*)&amx_exec_jump_table, 0);
-  }
+  if (NULL==amx_exec_jump_table)
+    amx_Exec(amx,(cell*)(void*)&amx_exec_jump_table,0);
 #endif
 
-  // Make sure there's 256 handlers total.
+  /* Make sure there's 256 handlers in total. */
   assert_static(1<<(sizeof(char)*8)==sizeof(handlers)/sizeof(handlers[0]));
 
   amx->cip=0;
@@ -659,22 +660,44 @@ int VerifyRelocateBytecode(AMX *amx)
   vdata.err=AMX_ERR_NONE;
   vdata.sysreq_flag=0;
 
-  /* Make sure the code section starts with OP_HALT instruction. */
+  /* Check the validity of the program header. */
+  if (hdr->publics>hdr->natives
+  ||  hdr->natives>hdr->libraries
+  ||  hdr->libraries>hdr->pubvars
+  ||  hdr->pubvars>hdr->tags
+  ||  ((hdr->file_version<7)
+      ? (hdr->tags>hdr->cod)
+      : (hdr->tags>hdr->nametable || hdr->nametable>hdr->cod))
+  ||  (USENAMETABLE(hdr) && hdr->file_version<7)) {
+err_format:
+    amx->flags &= ~AMX_FLAG_BROWSE;
+    return (amx->error=AMX_ERR_FORMAT);
+  } /* if */
+
+  /* Verify the addresses of public functions and variables. */
+  for (i=0; i<NUMPUBVARS(hdr); ++i)
+    if (AMX_UNLIKELY((GETENTRY(hdr,pubvars,i))->address>=vdata.datasize))
+      goto err_format;
+  for (i=0; i<NUMPUBLICS(hdr); ++i)
+    if (AMX_UNLIKELY((GETENTRY(hdr,publics,i))->address>=vdata.codesize))
+      goto err_format;
+
+  /* Make sure the code section starts with an OP_HALT instruction. */
   if (*(vdata.cip)!=OP_HALT) {
     amx->flags &= ~AMX_FLAG_BROWSE;
     return (amx->error=AMX_ERR_INVINSTR);
-  }
+  } /* if */
 
-  /* Verify all instructions in the script. */
+  /* Verify all instructions within the code section. */
   code_end=PTR_TO_CELLPTR(vdata.code+(size_t)vdata.codesize);
   while (vdata.cip<code_end) {
-    op=(size_t)(unsigned char)*vdata.cip;
-    num_args=handlers[op](&vdata);
+    size_t op=(size_t)(unsigned char)*vdata.cip;
+    int num_args=handlers[op](&vdata);
     if (num_args==-1) {
       amx->cip=(cell)((size_t)vdata.cip-(size_t)vdata.code);
       amx->flags &= ~AMX_FLAG_BROWSE;
       return (amx->error=AMX_ERR_INVINSTR);
-    }
+    } /* if */
 #if defined AMX_EXEC_USE_JUMP_TABLE && !defined AMX_DONT_RELOCATE
     /* Replace the operation code by a jump address
      * to the instruction handling code in amx_Exec.
@@ -682,19 +705,19 @@ int VerifyRelocateBytecode(AMX *amx)
     *(vdata.cip)=*PTR_TO_CELLPTR(&amx_exec_jump_table[op]);
 #endif
     vdata.cip+=(size_t)(1+num_args);
-  }
+  } /* while */
 #ifndef AMX_DONT_RELOCATE
   switch (vdata.sysreq_flag) {
-  case 0x0:
+  case 0:
     break;
-  case 0x1:
+  case SYSREQ_FLAG_D:
   #if defined AMX_EXEC_USE_JUMP_TABLE && !defined AMX_DONT_RELOCATE
     amx->sysreq_d=*PTR_TO_CELLPTR(&amx_exec_jump_table[(size_t)OP_SYSREQ_D]);
   #else
     amx->sysreq_d=OP_SYSREQ_D;
   #endif
     break;
-  case 0x2:
+  case SYSREQ_FLAG_ND:
   #if defined AMX_EXEC_USE_JUMP_TABLE && !defined AMX_DONT_RELOCATE
     amx->sysreq_d=*PTR_TO_CELLPTR(&amx_exec_jump_table[(size_t)OP_SYSREQ_ND]);
   #else
@@ -703,8 +726,9 @@ int VerifyRelocateBytecode(AMX *amx)
     amx->flags |= AMX_FLAG_SYSREQN;
     break;
   default:
-    return AMX_ERR_ASSERT;
-  }
+    amx->flags &= ~AMX_FLAG_BROWSE;
+    return (amx->error=AMX_ERR_ASSERT);
+  } /* switch */
 #endif
   amx->flags |= AMX_FLAG_RELOC;
   amx->flags &= ~AMX_FLAG_BROWSE;
