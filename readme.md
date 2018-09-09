@@ -78,6 +78,7 @@ There are also fixes for already existing native functions:
 
 <li>printf
 <br/>Fixed handling of "%%".
+<br/>Fixed the function printing <code>cellmin</code> incorrectly.
 </li>
 
 <li>ispacked
@@ -102,6 +103,10 @@ There are also fixes for already existing native functions:
 
 <li>getproperty
 <br/>Fixed the function being prone to a buffer overrun (added the <code>maxlength</code> argument).
+</li>
+
+<li>strformat
+<br/>Fixed the function printing <code>cellmin</code> incorrectly.
 </li>
 </ul>
 </li>
