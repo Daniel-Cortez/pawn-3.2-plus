@@ -557,15 +557,22 @@ static TCHAR *amx_strval(TCHAR buffer[], long value, int format, int width)
   start = stop = 0;
   switch (format) {
   case SV_DECIMAL:
-    if (value < 0) {
+    if (value >= 0) {
+      do {
+        buffer[stop++] = (TCHAR)((value % 10) + __T('0'));
+        value /= 10;
+      } while (value != 0);
+    } else {
       buffer[0] = __T('-');
       start = stop = 1;
-      value = -value;
+      do {
+        temp = (TCHAR)(value % 10);
+        if (temp < 0)
+          temp = -temp;
+        buffer[stop++] = (TCHAR)(temp + __T('0'));
+        value /= 10;
+      } while (value != 0);
     } /* if */
-    do {
-      buffer[stop++] = (TCHAR)((value % 10) + __T('0'));
-      value /= 10;
-    } while (value > 0);
     break;
   case SV_HEX: {
     unsigned long v = (unsigned long)value; /* copy to unsigned value for shifting */
@@ -685,7 +692,7 @@ static int dochar(AMX *amx,TCHAR ch,cell param,TCHAR sign,TCHAR decpoint,int wid
                   int (*f_putstr)(void*,const TCHAR *),int (*f_putchar)(void*,TCHAR),void *user)
 {
   cell *cptr;
-  TCHAR buffer[40];
+  TCHAR buffer[64+1];
   #if defined FLOATPOINT
     TCHAR formatstring[40];
   #endif
@@ -722,10 +729,10 @@ err_native:
       length++;
     if (value<0)
       value=-value;
-    while (value>=10) {
+    do {
       length++;
       value/=10;
-    } /* while */
+    } while (value!=0);
     width-=length;
     if (sign!=__T('-'))
       while (width-->0)

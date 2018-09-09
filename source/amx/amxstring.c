@@ -716,8 +716,7 @@ static cell AMX_NATIVE_CALL n_valstr(AMX *amx,const cell *params)
 #endif
   char *ptr;
   cell *cstr;
-  cell val;
-  int negate;
+  cell val,temp;
 
   EXPECT_PARAMS(4);
 
@@ -730,15 +729,20 @@ err_native:
     goto err_native;
 
   val=params[2];
-  negate=(val<0);
-  if (negate)
-    val=-val;
   ptr=start;
-  do {
-    *ptr-- = (char)(val % 10)+'0';
-  } while ((val /= 10)!=0);
-  if (negate)
+  if (val>=0) {
+    do {
+      *ptr-- = (char)(val % 10)+'0';
+    } while ((val /= 10)!=0);
+  } else {
+    do {
+      temp = val % 10;
+      if (temp<0)
+        temp = -temp;
+      *ptr-- = (char)temp+'0';
+    } while ((val /= 10)!=0);
     *ptr-- = '-';
+  } /* if */
   amx_SetString(cstr,ptr+1,(int)params[3],0,(int)params[4]);
   val=(cell)((size_t)start-(size_t)ptr)/(cell)sizeof(char);
   if (val>=params[4])
