@@ -113,12 +113,13 @@
 #endif
 
 #define CHKMARGIN()     do { if (AMX_UNLIKELY(hea+STKMARGIN>stk)) ERR_STACKERR(); } while (0)
+#define CHKPUSH()       do { if (AMX_UNLIKELY(hea>stk)) ERR_STACKERR(); } while (0)
 #define CHKSTACK()      do { if (AMX_UNLIKELY(stk>stp)) ERR_STACKLOW(); } while (0)
 #define CHKHEAP()       do { if (AMX_UNLIKELY(hea<hlw)) ERR_HEAPLOW(); } while (0)
 
 #define PUSH(v)         do {                                        \
                           stk-=(cell)sizeof(cell);                  \
-                          CHKMARGIN();                              \
+                          CHKPUSH();                              \
                           _W(data,stk,(v));                         \
                         } while (0)
 #define POP(v)          do {                                        \
@@ -129,7 +130,7 @@
 #define ALLOCSTACK(n)   do {                                        \
                           cptr=(cell *)(void *)(data+(size_t)stk);  \
                           stk-=(cell)(n)*(cell)sizeof(cell);        \
-                          CHKMARGIN();                              \
+                          CHKPUSH();                              \
                         } while (0)
 #define FREESTACK(n)    do {                                        \
                           cptr=(cell *)(void *)(data+(size_t)stk);  \
