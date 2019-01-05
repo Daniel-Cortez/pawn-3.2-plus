@@ -566,9 +566,9 @@ static TCHAR *amx_strval(TCHAR buffer[], long value, int format, int width)
       buffer[0] = __T('-');
       start = stop = 1;
       do {
-        temp = (TCHAR)(value % 10);
-        if (temp < 0)
-          temp = -temp;
+        temp = (TCHAR)(signed char)(value % 10);
+        if ((signed char)temp < 0)
+          temp = (TCHAR)-(signed char)temp;
         buffer[stop++] = (TCHAR)(temp + __T('0'));
         value /= 10;
       } while (value != 0);
