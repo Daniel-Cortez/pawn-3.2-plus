@@ -542,6 +542,7 @@ static cell AMX_NATIVE_CALL n_fclose(AMX *amx, const cell *params)
   UNUSED_PARAM(amx);
   if ((f=ptrarray_get(&filepool,params[1]))==NULL)
     return 0;
+  ptrarray_remove(&filepool,params[1]);
   return fclose(f)==0;
 }
 
