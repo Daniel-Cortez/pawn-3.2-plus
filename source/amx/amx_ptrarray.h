@@ -1,6 +1,6 @@
 /*  Dynamic pointer array implementation for use in AMX extension modules
  *
- *  Copyright (c) Stanislav Gromov, 2018
+ *  Copyright (c) Stanislav Gromov, 2018-2019
  *
  *  This software is provided "as-is", without any express or implied warranty.
  *  In no event will the authors be held liable for any damages arising from
