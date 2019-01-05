@@ -349,7 +349,7 @@ static cell AMX_NATIVE_CALL n_floatlog(AMX *amx,const cell *params)
     if (fValue <= 0.0 || fBase <= 0.0)
         return amx_RaiseError(amx, AMX_ERR_DOMAIN), 0;
 #if defined REAL_EPSILON
-    fTemp = fBase - 10.0;
+    fTemp = fBase - (REAL)10.0;
     if (fTemp < 0.0)
         fTemp = -fTemp;
     base10 = (fTemp < REAL_EPSILON);
