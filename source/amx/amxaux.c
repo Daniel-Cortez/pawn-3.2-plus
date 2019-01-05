@@ -87,7 +87,7 @@ int AMXAPI aux_LoadProgram(AMX *amx, char *filename, void *memblock)
     return AMX_ERR_FORMAT;
 
   /* initialize the abstract machine */
-  memset(amx, 0, sizeof *amx);
+  memset(amx, 0, sizeof(AMX));
   result = amx_Init(amx, memblock);
 
   /* free the memory block on error, if it was allocated here */

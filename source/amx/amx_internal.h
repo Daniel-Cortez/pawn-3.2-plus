@@ -36,12 +36,6 @@
   #endif
 #endif
 
-/* The macros below are supposed to inhibit compiler warnings about conversion
- * from pointer types (void*, cell* etc.) to integral types and vice versa.
- */
-#define PTR_TO_MEMSIZE(addr)            ((size_t)0|(size_t)(addr))
-#define PTR_TO_CELLPTR(addr)            ((cell *)(void *)(addr))
-
 /* When one or more of the AMX_funcname macros are defined, we want
  * to compile only those functions. However, when none of these macros
  * is present, we want to compile everything.
@@ -126,6 +120,7 @@
 #define NUMNATIVES(hdr)         NUMENTRIES((hdr),natives,libraries)
 #define NUMLIBRARIES(hdr)       NUMENTRIES((hdr),libraries,pubvars)
 #define NUMPUBVARS(hdr)         NUMENTRIES((hdr),pubvars,tags)
+#define NUMTAGS(hdr)            NUMENTRIES((hdr),tags,nametable)
 
 #if defined AMX_DONT_RELOCATE
   #define JUMPABS(base,ip)      ((cell *)((base) + *(ip)))
@@ -137,6 +132,24 @@
 
 #define STKMARGIN       ((cell)(16*sizeof(cell)))
 
+#if defined _MSC_VER
+  #define AMX_FASTCALL __fastcall
+#elif defined __GNUC__
+  #if defined __clang__
+    #define AMX_FASTCALL __attribute__((fastcall))
+  #elif (defined __i386__ || defined __x86_64__ || defined __amd64__)
+    #if !defined __x86_64__ && !defined __amd64__ && (__GNUC__>=4 || __GNUC__==3 && __GNUC_MINOR__>=4)
+      #define AMX_FASTCALL __attribute__((fastcall))
+    #else
+      #define AMX_FASTCALL __attribute__((regparam(3)))
+    #endif
+  #else
+    #define AMX_FASTCALL
+  #endif
+#else
+  #define AMX_FASTCALL
+#endif
+
 #define AMX_EXEC_USE_JUMP_TABLE
 #if (defined __GNUC__ && !defined __STRICT_ANSI__ || defined __ICC || defined __clang__) && \
     !(defined ASM32 || defined JIT)
@@ -145,14 +158,11 @@
   #undef AMX_EXEC_USE_JUMP_TABLE
 #endif
 
-#ifndef __clang__
+#if !defined __clang__ && !defined __has_builtin
   #define __has_builtin(x)      0
 #endif
-
-#if defined __clang__ && __has_builtin(__builtin_expect)|| \
-    defined __GNUC__ && !defined __clang__ && __GNUC__>2 || \
-    defined __INTEL_COMPILER || \
-    defined __IBMC__ && __IBMC__>=900 || defined __IBMCPP__ && __IBMCPP__>=900
+#if defined __clang__ && __has_builtin(__builtin_expect) || \
+    defined __GNUC__ && !defined __clang__ && __GNUC__>2
   #define AMX_LIKELY(x)         __builtin_expect(!!(x), 1)
   #define AMX_UNLIKELY(x)       __builtin_expect((x), 0)
 #else
