@@ -571,7 +571,7 @@ err_native:
     /* the string is packed, write it as an ASCII/ANSI string */
     if ((str=(char*)alloca(len+1))==NULL)
       goto err_native;
-    amx_GetString(str,cptr,0,len);
+    amx_GetString(str,cptr,0,len+1);
     return fputs(str,f);
   } /* if */
   /* the string is unpacked, write it as UTF-8 */
