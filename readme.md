@@ -76,6 +76,10 @@ There are also fixes for already existing native functions:
 <br/>Fixed garbage return value when the <code>utf8</code> argument is <code>false</code>.
 </li>
 
+<li>fwrite
+<br/>Fixed an issue when the last character in the string (before <code>'\0'</code>) didn't get written if the string was packed.
+</li>
+
 <li>printf
 <br/>Fixed handling of "%%".
 <br/>Fixed the function printing <code>cellmin</code> incorrectly.
