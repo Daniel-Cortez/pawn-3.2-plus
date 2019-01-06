@@ -700,20 +700,15 @@ err_native:
 static cell AMX_NATIVE_CALL n_valstr(AMX *amx,const cell *params)
 {
 #if PAWN_CELL_SIZE==16
-  static char str[7]=
-    {'\0','\0','\0','\0','\0','\0','\0'};
-  char *start=&str[5];
+  char str[7];
 #elif PAWN_CELL_SIZE==32
-  static char str[12]=
-    {'\0','\0','\0','\0','\0','\0','\0','\0','\0','\0','\0','\0'};
-  char *start=&str[10];
+  char str[12];
 #elif PAWN_CELL_SIZE==64
-  static char str[21]=
-    {'\0','\0','\0','\0','\0','\0','\0','\0','\0','\0','\0','\0','\0','\0','\0','\0','\0','\0','\0','\0','\0'};
-  char *start=&str[19];
+  char str[21];
 #else
   #error Unsupported cell size
 #endif
+  char *start=&str[sizeof(str)-1];
   char *ptr;
   cell *cstr;
   cell val,temp;
@@ -729,21 +724,22 @@ err_native:
     goto err_native;
 
   val=params[2];
+  *start='\0';
   ptr=start;
   if (val>=0) {
     do {
-      *ptr-- = (char)(val % 10)+'0';
+      *(--ptr)=(char)(val % 10)+'0';
     } while ((val /= 10)!=0);
   } else {
     do {
-      temp = val % 10;
+      temp=val % 10;
       if (temp<0)
         temp = -temp;
-      *ptr-- = (char)temp+'0';
+      *(--ptr)=(char)temp+'0';
     } while ((val /= 10)!=0);
-    *ptr-- = '-';
+    *(--ptr)='-';
   } /* if */
-  amx_SetString(cstr,ptr+1,(int)params[3],0,(int)params[4]);
+  amx_SetString(cstr,ptr,(int)params[3],0,(int)params[4]);
   val=(cell)((size_t)start-(size_t)ptr)/(cell)sizeof(char);
   if (val>=params[4])
     val=params[4]-1;
