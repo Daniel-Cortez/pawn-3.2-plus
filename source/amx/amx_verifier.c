@@ -621,6 +621,20 @@ static const VHANDLER handlers[256] = {
 static cell *amx_exec_jump_table = NULL;
 #endif
 
+static int AMX_FASTCALL VerifyTableOffsets(AMX_HEADER const *hdr,uint32_t table,
+  unsigned num_entries,uint32_t nametable_start,uint32_t nametable_end)
+{
+  unsigned i;
+  const size_t defsize=(size_t)hdr->defsize;
+  AMX_FUNCSTUBNT *entry=(AMX_FUNCSTUBNT *)((unsigned char *)hdr+(unsigned)table);
+  for (; num_entries!=0; num_entries--,*((unsigned char *)&entry)+=defsize)  {
+    const uint32_t nameofs=entry->nameofs;
+    if (AMX_UNLIKELY(nameofs<nametable_start || nameofs>=nametable_end))
+      return 0;
+  } /* for */
+  return 1;
+}
+
 #ifdef __cplusplus
   extern "C"
 #endif /* __cplusplus */
@@ -629,6 +643,7 @@ int VerifyRelocateBytecode(AMX *amx)
   VERIFICATION_DATA vdata;
   AMX_HEADER const *hdr=(AMX_HEADER *)amx->base;
   cell *code_end;
+  uint32_t nametable_start,nametable_end;
   unsigned i;
 
   /* Make sure there's 256 handlers in total. */
@@ -654,6 +669,26 @@ err_format:
     return (amx->error=AMX_ERR_FORMAT);
   } /* if */
 
+  /* Verify the addresses of public functions and variables. */
+  for (i=0; i<NUMPUBVARS(hdr); ++i)
+    if (AMX_UNLIKELY((GETENTRY(hdr,pubvars,i))->address>=vdata.datasize))
+      goto err_format;
+  for (i=0; i<NUMPUBLICS(hdr); ++i)
+    if (AMX_UNLIKELY((GETENTRY(hdr,publics,i))->address>=vdata.codesize))
+      goto err_format;
+
+  /* Verify name offsets in all tables within the AMX header. */
+  if (AMX_LIKELY(USENAMETABLE(hdr))) {
+    nametable_start=hdr->nametable+(uint32_t)sizeof(int16_t);
+    nametable_end=hdr->cod;
+    if (0==VerifyTableOffsets(hdr,hdr->publics,NUMPUBLICS(hdr),nametable_start,nametable_end)
+    ||  0==VerifyTableOffsets(hdr,hdr->natives,NUMNATIVES(hdr),nametable_start,nametable_end)
+    ||  0==VerifyTableOffsets(hdr,hdr->libraries,NUMLIBRARIES(hdr),nametable_start,nametable_end)
+    ||  0==VerifyTableOffsets(hdr,hdr->pubvars,NUMPUBVARS(hdr),nametable_start,nametable_end)
+    ||  0==VerifyTableOffsets(hdr,hdr->tags,NUMTAGS(hdr),nametable_start,nametable_end))
+      goto err_format;
+  } /* if */
+
   vdata.codesize=(ucell)(hdr->dat-hdr->cod);
   vdata.datasize=(ucell)(hdr->hea-hdr->dat);
   vdata.stacksize=(ucell)(hdr->stp-hdr->hea);
@@ -664,14 +699,6 @@ err_format:
   vdata.flags=0;
   vdata.cip=(cell *)vdata.code;
   amx->cip=0;
-
-  /* Verify the addresses of public functions and variables. */
-  for (i=0; i<NUMPUBVARS(hdr); ++i)
-    if (AMX_UNLIKELY((GETENTRY(hdr,pubvars,i))->address>=vdata.datasize))
-      goto err_format;
-  for (i=0; i<NUMPUBLICS(hdr); ++i)
-    if (AMX_UNLIKELY((GETENTRY(hdr,publics,i))->address>=vdata.codesize))
-      goto err_format;
 
   /* Make sure the code section starts with a "halt 0" instruction. */
   if (AMX_UNLIKELY(*(vdata.cip)!=OP_HALT || *PARAMADDR(vdata.cip, 1)!=(cell)AMX_ERR_NONE)) {
