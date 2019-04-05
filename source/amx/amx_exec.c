@@ -739,12 +739,17 @@ int AMXAPI amx_Exec(AMX *amx, cell *retval, int index)
           ERR_STACKERR();
         break;
       case 6:
-      sctrl_6:
+      sctrl_6: {
+        AMX_REGISTER_VAR ucell index;
         /* verify address */
         if (IS_INVALID_CODE_OFFS_NORELOC(pri,codesize))
           ERR_MEMACCESS();
+        index=(ucell)pri/sizeof(cell);
+        if ((amx->instr_addresses[index/8] & (unsigned char)1 << (index % 8))==0)
+          ERR_MEMACCESS();
         JUMP_NORELOC(pri);
         break;
+      } /* case */
       case 8:
         /* without the address translation this should be equal to 'sctrl 6' */
         goto sctrl_6;
@@ -839,12 +844,16 @@ int AMXAPI amx_Exec(AMX *amx, cell *retval, int index)
     OPHND_CASE(OP_RET): {
       AMX_REGISTER_VAR cell offs;
       AMX_REGISTER_VAR cell *cptr;
+      AMX_REGISTER_VAR ucell index;
       FREESTACK(2);
       frm=*cptr;
       offs=*(cptr+1);
       /* verify the return address */
       if (IS_INVALID_CODE_OFFS_NORELOC(offs,codesize))
-          ERR_MEMACCESS();
+        ERR_MEMACCESS();
+      index=(ucell)offs/sizeof(cell);
+      if ((amx->instr_addresses[index/8] & (unsigned char)1 << (index % 8))==0)
+        ERR_MEMACCESS();
       JUMP_NORELOC(offs);
     } /* OPHND_CASE */
     OPHND_NEXT(0);
@@ -852,11 +861,15 @@ int AMXAPI amx_Exec(AMX *amx, cell *retval, int index)
     OPHND_CASE(OP_RETN): {
       AMX_REGISTER_VAR cell offs;
       AMX_REGISTER_VAR cell *cptr;
+      AMX_REGISTER_VAR ucell index;
       FREESTACK(2);
       frm=*cptr;
       offs=*(cptr+1);
       /* verify the return address */
       if (IS_INVALID_CODE_OFFS_NORELOC(offs,codesize))
+        ERR_MEMACCESS();
+      index=(ucell)offs/sizeof(cell);
+      if ((amx->instr_addresses[index/8] & (unsigned char)1 << (index % 8))==0)
         ERR_MEMACCESS();
       stk+=_R(data,stk)+(cell)sizeof(cell); /* remove parameters from the stack */
       CHKSTACK();
@@ -1483,10 +1496,16 @@ int AMXAPI amx_Exec(AMX *amx, cell *retval, int index)
     OPHND_CASE(OP_SYMTAG):
     OPHND_NEXT(2);
 
-    OPHND_CASE(OP_JUMP_PRI):
+    OPHND_CASE(OP_JUMP_PRI): {
+      AMX_REGISTER_VAR ucell index;
+      /* verify address */
       if (IS_INVALID_CODE_OFFS_NORELOC(pri,codesize))
         ERR_MEMACCESS();
+      index=(ucell)pri/sizeof(cell);
+      if ((amx->instr_addresses[index/8] & (unsigned char)1 << (index % 8))==0)
+        ERR_MEMACCESS();
       JUMP_NORELOC(pri);
+    } /* OPHND_CASE */
     OPHND_NEXT(0);
 
     OPHND_CASE(OP_SWITCH): {
