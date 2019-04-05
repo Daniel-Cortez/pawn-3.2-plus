@@ -798,6 +798,9 @@ int AMXAPI amx_Cleanup(AMX *amx)
     free(amx->libraries);
     free(amx->natives);
   #endif
+  #if defined AMX_USE_NEW_AMXEXEC
+    free(amx->instr_addresses);
+  #endif
   return AMX_ERR_NONE;
 }
 #endif /* AMX_CLEANUP */

@@ -20,6 +20,7 @@
  */
 
 #include <assert.h>
+#include <string.h>
 
 #include "amx.h"
 #include "amx_internal.h"
@@ -73,6 +74,7 @@ typedef struct tagVERIFICATION_DATA {
   cell *cip;
   unsigned char *code;
   unsigned char *data;
+  unsigned char *instr_addresses;
   ucell num_natives;
   ucell codesize,datasize,stacksize;
   int flags;
@@ -93,12 +95,18 @@ static int AMX_FASTCALL v_parm1_number(VERIFICATION_DATA *vdata)
 static int AMX_FASTCALL v_parm1_codeoffs(VERIFICATION_DATA *vdata)
 {
   cell *arg_addr;
+  ucell index;
 
   arg_addr=PARAMADDR(vdata->cip,1);
   if (IS_INVALID_CODE_OFFS_NORELOC(*arg_addr,vdata->codesize)) {
+  err_bounds:
     vdata->err=AMX_ERR_BOUNDS;
     return -1;
   } /* if */
+  
+  index=(ucell)*arg_addr/sizeof(cell);
+  if ((vdata->instr_addresses[index/8] & (unsigned char)1 << (index % 8))==0)
+    goto err_bounds;
 
   RELOC_CODE_OFFS(vdata->code,arg_addr);
   return 1;
@@ -354,12 +362,21 @@ static int AMX_FASTCALL v_stack_heap(VERIFICATION_DATA *vdata)
 
 static int AMX_FASTCALL v_jrel(VERIFICATION_DATA *vdata)
 {
+  ucell index;
   const cell cip=(cell)((size_t)(vdata->cip)-(size_t)(vdata->code));
-  const cell tgt=cip+*PARAMADDR(vdata->cip,1)+(cell)sizeof(cell);
+  const cell tgt=cip+*PARAMADDR(vdata->cip,1)+(cell)2*(cell)sizeof(cell);
+
   if (IS_INVALID_CODE_OFFS_NORELOC(tgt,vdata->codesize)) {
+  err_bounds:
+    (void)0;
     vdata->err=AMX_ERR_BOUNDS;
     return -1;
   } /* if */
+  
+  index=(ucell)tgt/sizeof(cell);
+  if ((vdata->instr_addresses[index/8] & (unsigned char)1 << (index % 8))==0)
+    goto err_bounds;
+
   return 1;
 }
 
@@ -412,11 +429,18 @@ static int AMX_FASTCALL v_switch(VERIFICATION_DATA *vdata)
   const cell *cip=vdata->cip;
   const cell *arg_addr=PARAMADDR(cip,1);
   const cell arg=*arg_addr;
+  ucell index;
 
   if (IS_INVALID_CODE_OFFS_NORELOC(arg,vdata->codesize)) {
+  err_bounds:
     vdata->err=AMX_ERR_BOUNDS;
     return -1;
   } /* if */
+  
+  index=(ucell)arg/sizeof(cell);
+  if ((vdata->instr_addresses[index/8] & (unsigned char)1 << (index % 8))==0)
+    goto err_bounds;
+
   if (AMX_UNLIKELY(*CELLADDR(code,arg)!=(cell)OP_CASETBL)) {
     vdata->err=AMX_ERR_PARAMS;
     return -1;
@@ -435,19 +459,24 @@ static int AMX_FASTCALL v_casetbl(VERIFICATION_DATA *vdata)
   unsigned char const *code=vdata->code;
   cell *arg_addr;
   cell arg;
+  ucell index;
 
   /* get the total number of opcode parameters, then loop
    * through all of the case table entries and verify jump addresses
-   * (also check the "default" branch jump address in the 2'nd argument)
+   * (also check the 'default' jump address in the 2'nd argument)
    */
   num_args=2+((int)*PARAMADDR(cip,1))*2;
   for (i=2; i<=num_args; i+=2) {
     arg_addr=PARAMADDR(cip,i);
     arg=*arg_addr;
     if (IS_INVALID_CODE_OFFS_NORELOC(arg,codesize)) {
+    err_bounds:
       vdata->err=AMX_ERR_BOUNDS;
       return -1;
     } /* if */
+    index=(ucell)arg/sizeof(cell);
+    if ((vdata->instr_addresses[index/8] & (unsigned char)1 << (index % 8))==0)
+      goto err_bounds;
     RELOC_CODE_OFFS(code,arg_addr);
   } /* for */
 
@@ -630,6 +659,184 @@ static const VHANDLER handlers[256] = {
 #undef vhnd_dup10
 };
 
+#define OPSIZE_INV      ((unsigned char)0xFF)
+#define OPSIZE_CASETBL  ((unsigned char)0xFE)
+static unsigned char opcode_sizes[256] =
+{
+/* ---------------------------------- */
+/* OP_NONE */        OPSIZE_INV,
+/* OP_LOAD_PRI */    2,
+/* OP_LOAD_ALT */    2,
+/* OP_LOAD_S_PRI */  2,
+/* OP_LOAD_S_ALT */  2,
+/* OP_LREF_PRI */    2,
+/* OP_LREF_ALT */    2,
+/* OP_LREF_S_PRI */  2,
+/* OP_LREF_S_ALT */  2,
+/* OP_LOAD_I */      1,
+/* OP_LODB_I */      2,
+/* OP_CONST_PRI */   2,
+/* OP_CONST_ALT */   2,
+/* OP_ADDR_PRI */    2,
+/* OP_ADDR_ALT */    2,
+/* OP_STOR_PRI */    2,
+/* OP_STOR_ALT */    2,
+/* OP_STOR_S_PRI */  2,
+/* OP_STOR_S_ALT */  2,
+/* OP_SREF_PRI */    2,
+/* OP_SREF_ALT */    2,
+/* OP_SREF_S_PRI */  2,
+/* OP_SREF_S_ALT */  2,
+/* OP_STOR_I */      1,
+/* OP_STRB_I */      2,
+/* OP_LIDX */        1,
+/* OP_LIDX_B */      2,
+/* OP_IDXADDR */     1,
+/* OP_IDXADDR_B */   2,
+/* OP_ALIGN_PRI */   2,
+/* OP_ALIGN_ALT */   2,
+/* OP_LCTRL */       2,
+/* OP_SCTRL */       2,
+/* OP_MOVE_PRI */    1,
+/* OP_MOVE_ALT */    1,
+/* OP_XCHG */        1,
+/* OP_PUSH_PRI */    1,
+/* OP_PUSH_ALT */    1,
+/* OP_PUSH_R */      2,
+/* OP_PUSH_C */      2,
+/* OP_PUSH */        2,
+/* OP_PUSH_S */      2,
+/* OP_POP_PRI */     1,
+/* OP_POP_ALT */     1,
+/* OP_STACK */       2,
+/* OP_HEAP */        2,
+/* OP_PROC */        1,
+/* OP_RET */         1,
+/* OP_RETN */        1,
+/* OP_CALL */        2,
+/* OP_CALL_PRI */    1,
+/* OP_JUMP */        2,
+/* OP_JREL */        2,
+/* OP_JZER */        2,
+/* OP_JNZ */         2,
+/* OP_JEQ */         2,
+/* OP_JNEQ */        2,
+/* OP_JLESS */       2,
+/* OP_JLEQ */        2,
+/* OP_JGRTR */       2,
+/* OP_JGEQ */        2,
+/* OP_JSLESS */      2,
+/* OP_JSLEQ */       2,
+/* OP_JSGRTR */      2,
+/* OP_JSGEQ */       2,
+/* OP_SHL */         1,
+/* OP_SHR */         1,
+/* OP_SSHR */        1,
+/* OP_SHL_C_PRI */   2,
+/* OP_SHL_C_ALT */   2,
+/* OP_SHR_C_PRI */   2,
+/* OP_SHR_C_ALT */   2,
+/* OP_SMUL */        1,
+/* OP_SDIV */        1,
+/* OP_SDIV_ALT */    1,
+/* OP_UMUL */        1,
+/* OP_UDIV */        1,
+/* OP_UDIV_ALT */    1,
+/* OP_ADD */         1,
+/* OP_SUB */         1,
+/* OP_SUB_ALT */     1,
+/* OP_AND */         1,
+/* OP_OR */          1,
+/* OP_XOR */         1,
+/* OP_NOT */         1,
+/* OP_NEG */         1,
+/* OP_INVERT */      1,
+/* OP_ADD_C */       2,
+/* OP_SMUL_C */      2,
+/* OP_ZERO_PRI */    1,
+/* OP_ZERO_ALT */    1,
+/* OP_ZERO */        2,
+/* OP_ZERO_S */      2,
+/* OP_SIGN_PRI */    1,
+/* OP_SIGN_ALT */    1,
+/* OP_EQ */          1,
+/* OP_NEQ */         1,
+/* OP_LESS */        1,
+/* OP_LEQ */         1,
+/* OP_GRTR */        1,
+/* OP_GEQ */         1,
+/* OP_SLESS */       1,
+/* OP_SLEQ */        1,
+/* OP_SGRTR */       1,
+/* OP_SGEQ */        1,
+/* OP_EQ_C_PRI */    2,
+/* OP_EQ_C_ALT */    2,
+/* OP_INC_PRI */     1,
+/* OP_INC_ALT */     1,
+/* OP_INC */         2,
+/* OP_INC_S */       2,
+/* OP_INC_I */       1,
+/* OP_DEC_PRI */     1,
+/* OP_DEC_ALT */     1,
+/* OP_DEC */         2,
+/* OP_DEC_S */       2,
+/* OP_DEC_I */       1,
+/* OP_MOVS */        2,
+/* OP_CMPS */        2,
+/* OP_FILL */        2,
+/* OP_HALT */        2,
+/* OP_BOUNDS */      2,
+/* OP_SYSREQ_PRI */  1,
+/* OP_SYSREQ_C */    2,
+/* OP_FILE */        OPSIZE_INV,
+/* OP_LINE */        OPSIZE_INV,
+/* OP_SYMBOL */      OPSIZE_INV,
+/* OP_SRANGE */      OPSIZE_INV,
+/* OP_JUMP_PRI */    1,
+/* OP_SWITCH */      2,
+/* OP_CASETBL */     OPSIZE_CASETBL,
+/* OP_SWAP_PRI */    1,
+/* OP_SWAP_ALT */    1,
+/* OP_PUSH_ADR */    2,
+/* OP_NOP */         1,
+/* OP_SYSREQ_N */    3,
+/* OP_SYMTAG */      OPSIZE_INV,
+/* OP_BREAK */       1,
+/* ---------------------------------- */
+/* macro instructions */
+/* OP_PUSH2_C */     3,
+/* OP_PUSH2 */       3,
+/* OP_PUSH2_S */     3,
+/* OP_PUSH2_ADR */   3,
+/* OP_PUSH3_C */     4,
+/* OP_PUSH3 */       4,
+/* OP_PUSH3_S */     4,
+/* OP_PUSH3_ADR */   4,
+/* OP_PUSH4_C */     5,
+/* OP_PUSH4 */       5,
+/* OP_PUSH4_S */     5,
+/* OP_PUSH4_ADR */   5,
+/* OP_PUSH5_C */     6,
+/* OP_PUSH5 */       6,
+/* OP_PUSH5_S */     6,
+/* OP_PUSH5_ADR */   6,
+/* OP_LOAD_BOTH */   3,
+/* OP_LOAD_S_BOTH */ 3,
+/* OP_CONST */       3,
+/* OP_CONST_S */     3,
+/* ---------------------------------- */
+/* patched at runtime (not generated by the compiler) */
+/* OP_SYSREQ_D */    OPSIZE_INV,
+/* OP_SYSREQ_ND */   OPSIZE_INV,
+/* ---------------------------------- */
+/* invalid x96 */
+#define inv10   OPSIZE_INV, OPSIZE_INV, OPSIZE_INV, OPSIZE_INV, OPSIZE_INV,\
+                OPSIZE_INV, OPSIZE_INV, OPSIZE_INV, OPSIZE_INV, OPSIZE_INV
+/* 90 */ inv10, inv10, inv10, inv10, inv10, inv10, inv10, inv10, inv10,
+/* 96 */ OPSIZE_INV, OPSIZE_INV, OPSIZE_INV, OPSIZE_INV, OPSIZE_INV, OPSIZE_INV
+#undef  inv10
+};
+
 #if defined AMX_EXEC_USE_JUMP_TABLE && !defined AMX_DONT_RELOCATE
 static cell *amx_exec_jump_table = NULL;
 #endif
@@ -637,10 +844,9 @@ static cell *amx_exec_jump_table = NULL;
 static int AMX_FASTCALL VerifyTableOffsets(AMX_HEADER const *hdr,uint32_t table,
   unsigned num_entries,uint32_t nametable_start,uint32_t nametable_end)
 {
-  unsigned i;
   const size_t defsize=(size_t)hdr->defsize;
   AMX_FUNCSTUBNT *entry=(AMX_FUNCSTUBNT *)((unsigned char *)hdr+(unsigned)table);
-  for (; num_entries!=0; num_entries--,*((unsigned char *)&entry)+=defsize)  {
+  for (; num_entries!=0; num_entries--,((unsigned char *)entry)+=defsize)  {
     const uint32_t nameofs=entry->nameofs;
     if (AMX_UNLIKELY(nameofs<nametable_start || nameofs>=nametable_end))
       return 0;
@@ -661,6 +867,8 @@ int VerifyRelocateBytecode(AMX *amx)
 
   /* Make sure there's 256 handlers in total. */
   assert_static(sizeof(handlers)/sizeof(handlers[0])==256);
+  /* Also check the size of the opcode sizes array. */
+  assert_static(sizeof(opcode_sizes)/sizeof(opcode_sizes[0])==256);
 
   amx->flags |= AMX_FLAG_BROWSE;
 #if defined AMX_EXEC_USE_JUMP_TABLE && !defined AMX_DONT_RELOCATE
@@ -682,6 +890,30 @@ err_format:
     return (amx->error=AMX_ERR_FORMAT);
   } /* if */
 
+  vdata.codesize=(ucell)(hdr->dat-hdr->cod);
+  vdata.datasize=(ucell)(hdr->hea-hdr->dat);
+  vdata.stacksize=(ucell)(hdr->stp-hdr->hea);
+  if ((vdata.codesize & (sizeof(cell)-1))!=0
+  ||  (vdata.datasize & (sizeof(cell)-1))!=0
+  ||  (vdata.stacksize & (sizeof(cell)-1))!=0)
+    goto err_format;
+  vdata.code=amx->base+(size_t)hdr->cod;
+  vdata.data=amx->base+(size_t)hdr->dat;
+  vdata.num_natives=(ucell)NUMNATIVES(hdr);
+  vdata.err=AMX_ERR_NONE;
+  vdata.flags=0;
+  vdata.cip=(cell *)vdata.code;
+  amx->cip=0;
+  code_end=(cell *)(vdata.code+(size_t)vdata.codesize);
+  vdata.instr_addresses=calloc(1,((size_t)vdata.codesize+sizeof(cell)*8-1)/(sizeof(cell)*8));
+  if (NULL==vdata.instr_addresses) {
+    amx->flags &= ~AMX_FLAG_BROWSE;
+    return (amx->error=AMX_ERR_MEMORY);
+  } /* if */
+#if defined AMX_USE_NEW_AMXEXEC
+  amx->instr_addresses=vdata.instr_addresses;
+#endif
+
   /* Verify the addresses of public functions and variables. */
   for (i=0; i<NUMPUBVARS(hdr); ++i)
     if (AMX_UNLIKELY((GETENTRY(hdr,pubvars,i))->address>=vdata.datasize))
@@ -702,17 +934,6 @@ err_format:
       goto err_format;
   } /* if */
 
-  vdata.codesize=(ucell)(hdr->dat-hdr->cod);
-  vdata.datasize=(ucell)(hdr->hea-hdr->dat);
-  vdata.stacksize=(ucell)(hdr->stp-hdr->hea);
-  vdata.code=amx->base+(size_t)hdr->cod;
-  vdata.data=amx->base+(size_t)hdr->dat;
-  vdata.num_natives=(ucell)NUMNATIVES(hdr);
-  vdata.err=AMX_ERR_NONE;
-  vdata.flags=0;
-  vdata.cip=(cell *)vdata.code;
-  amx->cip=0;
-
   /* Make sure the code section starts with a "halt 0" instruction. */
   if (AMX_UNLIKELY(*(vdata.cip)!=OP_HALT || *PARAMADDR(vdata.cip, 1)!=(cell)AMX_ERR_NONE)) {
 err_invinstr:
@@ -721,17 +942,40 @@ err_invinstr:
     return (amx->error=AMX_ERR_INVINSTR);
   } /* if */
 
-  /* Verify all instructions within the code section. */
-  code_end=(cell *)(vdata.code+(size_t)vdata.codesize);
-  while (vdata.cip<code_end) {
-    AMX_REGISTER_VAR cell op;
-    AMX_REGISTER_VAR int num_args;
-    op=*vdata.cip;
-    if (AMX_UNLIKELY((op & ~0xFF)!=0))
+  /* Collect all instruction addresses within the code section. */
+  do {
+    AMX_REGISTER_VAR cell op=*vdata.cip;
+    AMX_REGISTER_VAR unsigned char op_size;
+    ucell index;
+    /* If the opcode doesn't fit into 1 byte, we have an invalid opcode. */
+    if (AMX_UNLIKELY((op & ~(cell)0xFF)!=0))
       goto err_invinstr;
+    op_size=opcode_sizes[op];
+    if (AMX_LIKELY((op_size & (unsigned char)0x80)!=0)) {
+      AMX_REGISTER_VAR cell *arg_addr;
+      if (AMX_UNLIKELY(op_size==OPSIZE_INV))
+        goto err_invinstr;
+      assert(AMX_LIKELY(op_size==OPSIZE_CASETBL));
+      arg_addr=PARAMADDR(vdata.cip,1);
+      if (AMX_UNLIKELY(arg_addr>=code_end))
+        goto err_invinstr;
+      op_size=(unsigned char)3+((unsigned char)*arg_addr)*(unsigned char)2;
+    } /* if */
+    index=(ucell)((size_t)vdata.cip-(size_t)vdata.code)/sizeof(cell);
+    vdata.instr_addresses[index/8] |= (unsigned char)1 << (index % 8);
+    vdata.cip+=op_size;
+  } while (vdata.cip<code_end);
+
+  /* Verify all instructions within the code section. */
+  vdata.cip=(cell *)vdata.code;
+  do {
+    AMX_REGISTER_VAR cell op=*vdata.cip;
+    AMX_REGISTER_VAR int num_args;
+    assert(AMX_LIKELY((op & ~(cell)0xFF)==0));
     num_args=handlers[op](&vdata);
     if (AMX_UNLIKELY(num_args==-1))
       goto err_invinstr;
+
 #if defined AMX_EXEC_USE_JUMP_TABLE && !defined AMX_DONT_RELOCATE
     /* Replace the operation code by a jump address
      * to the instruction handling code in amx_Exec.
@@ -739,7 +983,12 @@ err_invinstr:
     *(vdata.cip)=((cell *)amx_exec_jump_table)[op];
 #endif
     vdata.cip+=(size_t)(1+num_args);
-  } /* while */
+  } while (vdata.cip<code_end);
+
+#if !defined AMX_USE_NEW_AMXEXEC
+  free(vdata.instr_addresses);
+#endif
+
 #ifndef AMX_DONT_RELOCATE
   switch (vdata.flags & (VFLAG_SYSREQ_C | VFLAG_SYSREQ_N)) {
   case 0:
