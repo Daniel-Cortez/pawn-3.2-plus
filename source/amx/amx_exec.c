@@ -459,7 +459,7 @@ int AMXAPI amx_Exec(AMX *amx, cell *retval, int index)
       AMX_REGISTER_VAR cell offs;
       /* the address is already verified in VerifyRelocateBytecode */
       offs=_R_DATA_RELOC(data,GETPARAM(1));
-      if (IS_INVALID_DATA_OFFS(offs,datasize))
+      if (IS_INVALID_DATA_STACK_HEAP_OFFS(offs))
         ERR_MEMACCESS();
       pri=_R(data,offs);
     } /* OPHND_CASE */
@@ -469,7 +469,7 @@ int AMXAPI amx_Exec(AMX *amx, cell *retval, int index)
       AMX_REGISTER_VAR cell offs;
       /* the address is already verified in VerifyRelocateBytecode */
       offs=_R_DATA_RELOC(data,GETPARAM(1));
-      if (IS_INVALID_DATA_OFFS(offs,datasize))
+      if (IS_INVALID_DATA_STACK_HEAP_OFFS(offs))
         ERR_MEMACCESS();
       alt=_R(data,offs);
     } /* OPHND_CASE */
@@ -481,7 +481,7 @@ int AMXAPI amx_Exec(AMX *amx, cell *retval, int index)
       if (IS_INVALID_STACK_OFFS(offs))
         ERR_MEMACCESS();
       offs=_R(data,frm+offs);
-      if (IS_INVALID_DATA_OFFS(offs,datasize))
+      if (IS_INVALID_DATA_STACK_HEAP_OFFS(offs))
         ERR_MEMACCESS();
       pri=_R(data,offs);
     } /* OPHND_CASE */
@@ -493,7 +493,7 @@ int AMXAPI amx_Exec(AMX *amx, cell *retval, int index)
       if (IS_INVALID_STACK_OFFS(offs))
         ERR_MEMACCESS();
       offs=_R(data,frm+offs);
-      if (IS_INVALID_DATA_OFFS(offs,datasize))
+      if (IS_INVALID_DATA_STACK_HEAP_OFFS(offs))
         ERR_MEMACCESS();
       alt=_R(data,offs);
     } /* OPHND_CASE */
@@ -571,7 +571,7 @@ int AMXAPI amx_Exec(AMX *amx, cell *retval, int index)
       AMX_REGISTER_VAR cell offs;
       /* the address is already verified in VerifyRelocateBytecode */
       offs=_R_DATA_RELOC(data,GETPARAM(1));
-      if (IS_INVALID_DATA_OFFS(offs,datasize))
+      if (IS_INVALID_DATA_STACK_HEAP_OFFS(offs))
         ERR_MEMACCESS();
       _W(data,offs,pri);
     } /* OPHND_CASE */
@@ -581,7 +581,7 @@ int AMXAPI amx_Exec(AMX *amx, cell *retval, int index)
       AMX_REGISTER_VAR cell offs;
       /* the address is already verified in VerifyRelocateBytecode */
       offs=_R_DATA_RELOC(data,GETPARAM(1));
-      if (IS_INVALID_DATA_OFFS(offs,datasize))
+      if (IS_INVALID_DATA_STACK_HEAP_OFFS(offs))
         ERR_MEMACCESS();
       _W(data,offs,alt);
     } /* OPHND_CASE */
@@ -593,7 +593,7 @@ int AMXAPI amx_Exec(AMX *amx, cell *retval, int index)
       if (IS_INVALID_STACK_OFFS(offs))
         ERR_MEMACCESS();
       offs=_R(data,frm+offs);
-      if (IS_INVALID_DATA_OFFS(offs,datasize))
+      if (IS_INVALID_DATA_STACK_HEAP_OFFS(offs))
         ERR_MEMACCESS();
       _W(data,offs,pri);
     } /* OPHND_CASE */
@@ -605,7 +605,7 @@ int AMXAPI amx_Exec(AMX *amx, cell *retval, int index)
       if (IS_INVALID_STACK_OFFS(offs))
         ERR_MEMACCESS();
       offs=_R(data,frm+offs);
-      if (IS_INVALID_DATA_OFFS(offs,datasize))
+      if (IS_INVALID_DATA_STACK_HEAP_OFFS(offs))
         ERR_MEMACCESS();
       _W(data,offs,alt);
     } /* OPHND_CASE */
