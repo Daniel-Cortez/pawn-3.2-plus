@@ -89,6 +89,14 @@ native Float:floatcos(Float:value, anglemode:mode=radian);
 native Float:floattan(Float:value, anglemode:mode=radian);
 
 /**************************************************/
+/* Return the arc sine, arc cosine or arc tangent. Returned angle may be
+   in radian, degrees or grades. */
+native Float:floatasin(Float:value, anglemode:mode=radian);
+native Float:floatacos(Float:value, anglemode:mode=radian);
+native Float:floatatan(Float:value, anglemode:mode=radian);
+native Float:floatatan2(Float:y, Float:x, anglemode:mode=radian);
+
+/**************************************************/
 /* Return the absolute value */
 native Float:floatabs(Float:value);
 
