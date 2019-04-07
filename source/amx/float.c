@@ -376,6 +376,19 @@ static REAL ToRadians(REAL angle, cell radix)
     } /* switch */
 }
 
+static REAL FromRadians(REAL angle, cell radix)
+{
+    switch ((int)radix)
+    {
+        case degrees: /* degrees, sexagesimal system (technically: degrees/minutes/seconds) */
+            return (REAL)(angle * 180.0 / PI);
+        case grades:  /* grades, centesimal system */
+            return (REAL)(angle * 200.0 / PI);
+        default:                /* assume already radian */
+            return angle;
+    } /* switch */
+}
+
 /******************************************************************/
 static cell AMX_NATIVE_CALL n_floatsin(AMX *amx,const cell *params)
 {
@@ -434,6 +447,84 @@ static cell AMX_NATIVE_CALL n_floattan(AMX *amx,const cell *params)
 }
 
 /******************************************************************/
+static cell AMX_NATIVE_CALL n_floatasin(AMX *amx, const cell *params)
+{
+    /*
+    *   params[0] = number of bytes
+    *   params[1] = float operand 1 (value)
+    *   params[2] = float operand 2 (radix)
+    */
+    REAL fA;
+
+    EXPECT_PARAMS(2);
+
+    fA = amx_ctof(params[1]);
+    if (fA < -1.0 || fA > 1.0)
+        return amx_RaiseError(amx, AMX_ERR_DOMAIN), 0;
+    fA = (REAL)asin(fA);
+    fA = FromRadians(fA, params[2]);
+    return amx_ftoc(fA);
+}
+
+/******************************************************************/
+static cell AMX_NATIVE_CALL n_floatacos(AMX *amx, const cell *params)
+{
+    /*
+    *   params[0] = number of bytes
+    *   params[1] = float operand 1 (value)
+    *   params[2] = float operand 2 (radix)
+    */
+    REAL fA;
+
+    EXPECT_PARAMS(2);
+
+    fA = amx_ctof(params[1]);
+    if (fA < -1.0 || fA > 1.0)
+        return amx_RaiseError(amx, AMX_ERR_DOMAIN), 0;
+    fA = (REAL)acos(fA);
+    fA = FromRadians(fA, params[2]);
+    return amx_ftoc(fA);
+}
+
+/******************************************************************/
+static cell AMX_NATIVE_CALL n_floatatan(AMX *amx, const cell *params)
+{
+    /*
+    *   params[0] = number of bytes
+    *   params[1] = float operand 1 (value)
+    *   params[2] = float operand 2 (radix)
+    */
+    REAL fA;
+
+    EXPECT_PARAMS(2);
+
+    fA = amx_ctof(params[1]);
+    fA = (REAL)atan(fA);
+    fA = FromRadians(fA, params[2]);
+    return amx_ftoc(fA);
+}
+
+/******************************************************************/
+static cell AMX_NATIVE_CALL n_floatatan2(AMX *amx, const cell *params)
+{
+    /*
+    *   params[0] = number of bytes
+    *   params[1] = float operand 1 (y)
+    *   params[2] = float operand 2 (x)
+    *   params[3] = float operand 3 (radix)
+    */
+    REAL fA, fB;
+
+    EXPECT_PARAMS(3);
+
+    fA = amx_ctof(params[1]);
+    fB = amx_ctof(params[2]);
+    fA = (REAL)atan2(fA, fB);
+    fA = FromRadians(fA, params[3]);
+    return amx_ftoc(fA);
+}
+
+/******************************************************************/
 static cell AMX_NATIVE_CALL n_floatabs(AMX *amx,const cell *params)
 {
     /*
@@ -468,6 +559,10 @@ static const AMX_NATIVE_INFO natives[] = {
   { "floatsin",    n_floatsin   },
   { "floatcos",    n_floatcos   },
   { "floattan",    n_floattan   },
+  { "floatasin",   n_floatasin  },
+  { "floatacos",   n_floatacos  },
+  { "floatatan",   n_floatatan  },
+  { "floatatan2",  n_floatatan2 },
   { "floatabs",    n_floatabs   },
   { NULL, NULL }        /* terminator */
 };
