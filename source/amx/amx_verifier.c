@@ -833,7 +833,7 @@ static int AMX_FASTCALL VerifyTableOffsets(AMX_HEADER const *hdr,uint32_t table,
 {
   const size_t defsize=(size_t)hdr->defsize;
   AMX_FUNCSTUBNT *entry=(AMX_FUNCSTUBNT *)((unsigned char *)hdr+(unsigned)table);
-  for (; num_entries!=0; num_entries--,((unsigned char *)entry)+=defsize)  {
+  for (; num_entries!=0; num_entries--,(*(unsigned char **)&entry)+=defsize)  {
     const uint32_t nameofs=entry->nameofs;
     if (AMX_UNLIKELY(nameofs<nametable_start || nameofs>=nametable_end))
       return 0;
