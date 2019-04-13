@@ -34,6 +34,10 @@ native bool: deletecfg(const filename[]="", const section[]="", const key[]="");
 <li>amxFloat
 
 ```Pawn
+native Float:floatasin(Float:value, anglemode:mode=radian);
+native Float:floatacos(Float:value, anglemode:mode=radian);
+native Float:floatatan(Float:value, anglemode:mode=radian);
+native Float:floatatan2(Float:y, Float:x, anglemode:mode=radian);
 native Float:floatint(Float:value);
 native operator=(Float:oper) = floatint;
 ```
@@ -121,9 +125,6 @@ There are also fixes for already existing native functions:
 
 <li>Added custom interpreter core (<code>amx_Exec</code>) which merges two standard cores (the GCC-specific one and the ANSI C one) into one codebase.
 <br/>The new core has additional runtime checks that fix various bugs and vulnerabilities in the interpreter.
-<br/>For example, in the original Pawn 3.2 most of the memory (stack/heap and data sections) access instructions don't have any address checks, which allows to read/write data outside of the script memory.
-<br/>There are also no checks for stack overflow/underflow in any of the stack operations (other than the <code>STACK</code> opcode), so it's possible to use <code>SCTRL 4</code> to make <code>CIP</code> point outside of the script memory and then read/write data from there with <code>PUSH*</code>/<code>POP*</code> instructions.
-<br/>These two and a few other kinds of vulnerabilities are fixed in the new core.
 The old cores still can be used by disabling the <code>PAWN_USE_NEW_AMXEXEC</code> option in the CMake project.
 </li>
 
