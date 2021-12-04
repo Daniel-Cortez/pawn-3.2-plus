@@ -223,7 +223,7 @@ int AMXAPI amx_Callback(AMX *amx, cell index, cell *result, const cell *params)
 #endif
   AMX_HEADER *hdr;
   AMX_NATIVE f;
-#if !( (!defined AMX_PTR_SIZE) || (AMX_PTR_SIZE>PAWN_CELL_SIZE) )
+#if defined AMX_PTR_SIZE && AMX_PTR_SIZE<=PAWN_CELL_SIZE
   AMX_FUNCSTUB *func;
 #endif
 
@@ -239,11 +239,11 @@ int AMXAPI amx_Callback(AMX *amx, cell index, cell *result, const cell *params)
   } else {
 #endif
     assert(index>=0 && index<(cell)NUMNATIVES(hdr));
-    #if (!defined AMX_PTR_SIZE) || (AMX_PTR_SIZE>PAWN_CELL_SIZE)
-      f=(AMX_NATIVE)amx->natives[(size_t)index];
-    #else
+    #if defined AMX_PTR_SIZE && AMX_PTR_SIZE<=PAWN_CELL_SIZE
       func=GETENTRY(hdr,natives,index);
       f=(AMX_NATIVE)func->address;
+    #else
+      f=(AMX_NATIVE)amx->natives[(size_t)index];
     #endif
 #if defined AMX_NATIVETABLE
   } /* if */
