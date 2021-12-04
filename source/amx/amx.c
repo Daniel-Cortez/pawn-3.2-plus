@@ -285,16 +285,14 @@ int AMXAPI amx_Callback(AMX *amx, cell index, cell *result, const cell *params)
       /* at the point of the call, the CIP pseudo-register points directly
        * behind the SYSREQ instruction and its parameter(s)
        */
-      unsigned char *code=amx->base+(int)hdr->cod+(int)amx->cip-sizeof(cell);
+      unsigned char *code=amx->base+(int)hdr->cod+(int)amx->cip;
       assert(amx->cip >= 4 && amx->cip < (hdr->dat - hdr->cod));
-      if (amx->flags & AMX_FLAG_SYSREQN)		/* SYSREQ.N has 2 parameters */
-        code-=sizeof(cell);
 #if defined AMX_EXEC_USE_JUMP_TABLE
       if (*(cell*)code==index) {
 #else
       if (*(cell*)code!=OP_SYSREQ_PRI) {
-        assert(*(cell*)(code-sizeof(cell))==OP_SYSREQ_C || *(cell*)(code-sizeof(cell))==OP_SYSREQ_N);
-        assert(*(cell*)code==index);
+        assert(*(cell*)code==OP_SYSREQ_C || *(cell*)code==OP_SYSREQ_N);
+        assert(*(cell*)(code+sizeof(cell))==index);
 #endif
 #endif /* defined AMX_USE_NEW_AMXEXEC */
         *(cell*)(code-sizeof(cell))=amx->sysreq_d;
