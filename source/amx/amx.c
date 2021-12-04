@@ -718,11 +718,11 @@ int AMXAPI amx_InitJIT(AMX *amx, void *reloc_table, void *native_code)
 
 #else /* #if defined JIT */
 
-int AMXAPI amx_InitJIT(AMX *amx,void *compiled_program,void *reloc_table)
+int AMXAPI amx_InitJIT(AMX *amx, void *reloc_table, void *native_code)
 {
   (void)amx;
-  (void)compiled_program;
   (void)reloc_table;
+  (void)native_code;
   return AMX_ERR_INIT_JIT;
 }
 
