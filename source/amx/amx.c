@@ -276,7 +276,7 @@ int AMXAPI amx_Callback(AMX *amx, cell index, cell *result, const cell *params)
         assert(*(cell*)(code)==(cell)(size_t)jump_table[OP_SYSREQ_C]
             || *(cell*)(code)==(cell)(size_t)jump_table[OP_SYSREQ_N]);
 #else
-      if (*(cell *)code != (cell)OP_SYSREQ_PRI) {
+      if (*(cell *)code!=(cell)OP_SYSREQ_PRI) {
         assert(*(cell*)(code)==OP_SYSREQ_C || *(cell*)(code)==OP_SYSREQ_N);
 #endif
         code+=sizeof(cell);

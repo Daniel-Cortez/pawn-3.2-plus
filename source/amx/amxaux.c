@@ -154,7 +154,7 @@ int AMXAPI aux_GetSection(AMX *amx, int section, cell **start, size_t *size)
     return AMX_ERR_PARAMS;
 
   hdr = (AMX_HEADER*)amx->base;
-  switch(section) {
+  switch (section) {
   case CODE_SECTION:
     *start = (cell *)(amx->base + hdr->cod);
     *size = hdr->dat - hdr->cod;
