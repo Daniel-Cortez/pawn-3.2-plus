@@ -672,6 +672,7 @@ int AMXAPI amx_InitJIT(AMX *amx, void *reloc_table, void *native_code)
 
   if ((amx->flags & AMX_FLAG_JITC)==0)
     return AMX_ERR_INIT_JIT;    /* flag not set, this AMX is not prepared for JIT */
+  hdr=(AMX_HEADER *)amx->base;
   if (hdr->file_version>MAX_FILE_VER_JIT)
     return AMX_ERR_VERSION;     /* JIT may not support the newest file version(s) */
 
