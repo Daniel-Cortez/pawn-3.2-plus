@@ -3886,14 +3886,14 @@ int AMXAPI amx_SetString(cell *dest,const char *source,int pack,int use_wchar,si
       len=size-1;
     #if defined AMX_ANSIONLY
       for (i=0; i<len; i++)
-        dest[i]=(cell)source[i];
+        dest[i]=(cell)(ucell)source[i];
     #else
       if (use_wchar) {
         for (i=0; i<len; i++)
-          dest[i]=(cell)(((wchar_t*)source)[i]);
+          dest[i]=(cell)(ucell)(((wchar_t*)source)[i]);
       } else {
         for (i=0; i<len; i++)
-          dest[i]=(cell)source[i];
+          dest[i]=(cell)(ucell)source[i];
       } /* if */
     #endif
     dest[len]=0;
