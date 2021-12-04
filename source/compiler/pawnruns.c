@@ -12,6 +12,11 @@
 #include "../amx/amx.h"
 #include "../amx/amxaux.h"
 
+extern int AMXEXPORT AMXAPI amx_CoreInit(AMX *amx);
+extern int AMXEXPORT AMXAPI amx_CoreCleanup(AMX *amx);
+extern int AMXEXPORT AMXAPI amx_ConsoleInit(AMX *amx);
+extern int AMXEXPORT AMXAPI amx_ConsoleCleanup(AMX *amx);
+
 static void ErrorExit(AMX *amx, int errorcode)
 {
   printf("Run time error %d: \"%s\"\n", errorcode, aux_StrError(errorcode));
@@ -40,8 +45,8 @@ int main(int argc,char *argv[])
   if (err != AMX_ERR_NONE)
     ErrorExit(&amx, err);
 
-  amx_Register(&amx, console_Natives, -1);
-  err = amx_Register(&amx, core_Natives, -1);
+  amx_CoreInit(&amx);
+  err = amx_ConsoleInit(&amx);
   if (err != AMX_ERR_NONE)
     ErrorExit(&amx, err);
 
@@ -50,6 +55,8 @@ int main(int argc,char *argv[])
     ErrorExit(&amx, err);
   printf("%s returns %ld\n", argv[1], (long)ret);
 
+  amx_ConsoleCleanup(&amx);
+  amx_CoreCleanup(&amx);
   aux_FreeProgram(&amx);
   return 0;
 }

@@ -170,6 +170,10 @@ if(BUILD_TESTING)
     pawnruns.c
     ../amx/amx.c
     ../amx/amx.h
+    ../amx/amx_internal.h
+    ../amx/amx_opcodes.h
+    ../amx/amx_exec.c
+    ../amx/amx_verifier.c
     ../amx/amxaux.c
     ../amx/amxaux.h
     ../amx/amxcons.c
