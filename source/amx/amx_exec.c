@@ -1,6 +1,6 @@
 /*  AMX bytecode (P-Code) interpreter core.
  *
- *  Portions copyright (c) Stanislav Gromov, 2016-2019
+ *  Portions copyright (c) Stanislav Gromov, 2016-2022
  *
  *  This code was derived from code carrying the following copyright notice:
  *
